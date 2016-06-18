@@ -1,0 +1,24 @@
+{
+  "name": "glimpse",
+  "version": "1.0.0",
+  "description": "JS terrain and population simulator",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anyweez/panorama.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anyweez/panorama/issues"
+  },
+  "homepage": "https://github.com/anyweez/panorama#readme",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-pug": "^3.0.3",
+    "gulp-sass": "^2.3.2"
+  }
+}
