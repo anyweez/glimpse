@@ -8,6 +8,8 @@ using any libraries and am focusing on balancing the quality of the output with 
 At it's conclusion, I'd like to support infinitely large maps (bounded only by the memory available to the browser) as well as a life simulator. The
 majority of world simulation will take place prior to first render, but the majority of life simulation would take place after rendering has begun.
 
+![Example terrain](https://anyweez.github.io/glimpse/img/terrain.png)
+
 ### Altitude generation
 Glimpse currently uses the [diamond-square algorithm](https://en.wikipedia.org/wiki/Diamond-square_algorithm) to generate the elevation map, the most 
 important property of every cell in the grid. Every cell has an altitude and it doesn't change once assigned.
