@@ -1,13 +1,23 @@
 function colorOf(cell) {
-    // if (cell.terrain === 'grass') return 'green';
-    // else if (cell.terrain === 'water') return 'blue';
-    // else return 'brown';
-
     let r = Math.round(255 * ((100 - cell.elevation) / 100));
     let g = Math.round(255 * (cell.elevation / 100));
     let b = 0;
 
     return `rgb(${r},${g},${b})`;
+}
+
+let fps = {
+    total: 0,
+};
+
+function count_frame() {
+    let sec = Math.floor(Date.now() / 1000);
+    if (sec in fps) fps[sec] += 1;
+    else fps[sec] = 1;
+
+    fps.total += 1;
+
+    if (fps.total % 1000 === 0) console.log(fps);
 }
 
 const BOUNCE_BORDER = 25;
@@ -19,7 +29,7 @@ module.exports = {
     },
 
     camera: {
-        zoom: 2,
+        zoom: 1.7,
 
         offset: {
             x: 0,
@@ -32,8 +42,8 @@ module.exports = {
         },
 
         direction: {
-            x: 8,
-            y: 6,
+            x: 1,
+            y: 0.6,
         },
 
         dims: {
@@ -44,6 +54,19 @@ module.exports = {
 
         // todo: identify which cells are visible
         visible(cell) {
+            let dimension = this.camera.zoom * this.camera.dims.primary / this.map.dim;
+
+            let pixelX = cell.x * dimension;
+            let pixelY = cell.y * dimension;
+
+            // lower bound
+            if (this.camera.transform.x * -1 > pixelX + dimension) return false;
+            if (this.camera.transform.y * -1 > pixelY + dimension) return false;
+
+            // upper bound
+            if (this.camera.transform.x * -1 + this.camera.dims.width < pixelX) return false;
+            if (this.camera.transform.y * -1 + this.camera.dims.height < pixelY) return false;
+
             return true;
         },
     },
@@ -64,8 +87,8 @@ module.exports = {
         this.ctx = canvas.getContext('2d');
 
         // setInterval(() => this.camera.offset.x += 10, 1000);
-        setInterval(this._bounce.bind(this), 100);
-        this._bounce();
+        setInterval(this._bounce.bind(this), 25);
+        // this._bounce();
 
         window.requestAnimationFrame(this._renderFrame.bind(this));
         console.log('rendering started');
@@ -82,8 +105,9 @@ module.exports = {
         if (targetY > BOUNCE_BORDER && this.camera.direction.y > 0) this.camera.direction.y *= -1;
 
         // upper limit
-        if (targetX * -1 > this.camera.dims.primary + BOUNCE_BORDER) this.camera.direction.x *= -1;
-        if (targetY * -1 > this.camera.dims.primary + BOUNCE_BORDER) this.camera.direction.y *= -1;
+        // todo: why these magic 100's??
+        if (targetX * -1 > this.camera.dims.primary / this.camera.zoom - BOUNCE_BORDER - 100) this.camera.direction.x *= -1;
+        if (targetY * -1 > this.camera.dims.primary / this.camera.zoom + BOUNCE_BORDER + 100) this.camera.direction.y *= -1;
 
         this.camera.offset.x += this.camera.direction.x;
         this.camera.offset.y += this.camera.direction.y;
@@ -95,6 +119,8 @@ module.exports = {
     _renderFrame: function () {
         let self = this;
         let dimension = this.camera.zoom * this.camera.dims.primary / this.map.dim;
+
+        count_frame();
 
         // clear the canvas
         self.ctx.clearRect(
@@ -116,9 +142,9 @@ module.exports = {
         }
 
         // render the visible items
-        this.map.grid.filter(this.camera.visible).forEach(function (cell) {
-            self.ctx.fillStyle = colorOf(cell);
+        this.map.grid.filter(this.camera.visible.bind(this)).forEach(function (cell) {
             if (self.options.showWater && cell.water) self.ctx.fillStyle = 'blue';
+            else self.ctx.fillStyle = colorOf(cell);
 
             self.ctx.fillRect(cell.x * dimension + 1, cell.y * dimension + 1, dimension - 2, dimension - 2);
         });
