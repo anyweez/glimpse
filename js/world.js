@@ -1,9 +1,11 @@
+// How much elevation should randomly vary from its surroundings.
+const ELEVATION_NOISE_LEVEL = 7;
 
 function World(dim) {
     this.dim = dim;
     this.grid = [];
 
-    this.aquiferDepth = 50;
+    this.aquiferDepth = 35;
 
     for (let y = 0; y < dim; y++) {
         for (let x = 0; x < dim; x++) {
@@ -49,7 +51,7 @@ World.prototype.neighbors = function (cell) {
     return neighbors;
 }
 
-World.prototype.generateTerrain = function () {
+World.prototype.generateElevations = function () {
     let self = this;
 
     function midpoint(tl, br) {
@@ -62,7 +64,7 @@ World.prototype.generateTerrain = function () {
 
     function square(tl, tr, bl, br, variance) {
         let elev = (tl.elevation + tr.elevation + bl.elevation + br.elevation) / 4;
-        let rand = (Math.random() - 0.5) * 10 * variance;
+        let rand = (Math.random() - 0.5) * ELEVATION_NOISE_LEVEL * variance;
 
         let mid = midpoint(tl, br);
         mid.elevation = Math.max(0, elev + rand);
@@ -134,7 +136,7 @@ World.prototype.rainfall = function () {
         }, start);
 
         if (start.x === lowest.x && start.y === lowest.y) return start;
-        else return drip(lowest); 
+        else return drip(lowest);
     }
 
     // todo: replace this.dim * 2 with a world-level 'wetness' constant
@@ -160,25 +162,81 @@ World.prototype.evaporate = function () {
     });
 }
 
+/**
+ * Iteratively determine what terrain type each cell is. Terrainify will continue to iterate
+ * over all cells until the terrain types of all cells are static for a full iteration.
+ */
+World.prototype.terrainify = function () {
+    let changed = true;
+    let iteration = 1;
+
+    while (changed) {
+        console.log('starting terrainify iter #' + iteration);
+        changed = false;
+
+        this.grid.forEach(cell => {
+            let label = cell.availableTerrains.find(terr => terr.func(cell, this)).label;
+
+            if (cell.terrain !== label) {
+                changed = true;
+                cell.terrain = label;
+            }
+        });
+
+        iteration++;
+    }
+};
+
 World.prototype.init = function () {
-    this.generateTerrain();
+    let start = Date.now();
+
+    this.generateElevations();
     this.aquifer();
     this.rainfall();
     this.evaporate();
+
+    this.terrainify();
+
+    console.log(`World generated in ${Math.round((Date.now() - start) / 10) / 100} seconds.`)
 };
 
 function Cell(x, y) {
     this.x = x;
     this.y = y;
-    this.terrain = this.availableTerrains[Math.floor(Math.random() * this.availableTerrains.length)];
-    // this.elevation = Math.round(Math.random() * 100);
-    this.elevation = 10.0;
+    this.terrain = null;
+    this.elevation = 0; // default, will be replaced with something procedural
     this.water = false;
 
     return this;
 }
 
-Cell.prototype.availableTerrains = ['grass', 'dirt', 'water'];
+Cell.prototype.availableTerrains = [
+    {
+        label: 'water',
+        func: function (cell, world) { return cell.water; }
+    },
+    {
+        label: 'sand',
+        func: function (cell, world) {
+            let valid = world.neighbors(cell).filter(cell => cell.water || cell.terrain === 'sand').length > 0;
+
+            return valid && cell.elevation - world.aquiferDepth < 10;
+        }
+    },
+    {
+        label: 'rock',
+        func: function (cell, world) {
+            return cell.elevation > 90;
+        }
+    },
+    // grass is the default unless terrain has another label
+    {
+        label: 'grass',
+        func: function (cell, world) {
+            return true;
+        }
+    }
+];
 
 module.exports = {
     World: World,

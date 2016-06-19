@@ -1,10 +1,31 @@
-function colorOf(cell) {
-    let r = Math.round(255 * ((100 - cell.elevation) / 100));
-    let g = Math.round(255 * (cell.elevation / 100));
-    let b = 0;
 
-    return `rgb(${r},${g},${b})`;
-}
+let color = {
+    elevation: function (cell) {
+        let r = Math.round(255 * ((100 - cell.elevation) / 100));
+        let g = Math.round(255 * (cell.elevation / 100));
+        let b = 0;
+
+        return `rgb(${r},${g},${b})`;
+    },
+
+    terrain: function (cell) {
+        if (cell.terrain === 'water') {
+            if (cell.elevation < 5) return '#1E4F6E';
+            else if (cell.elevation < 15) return '#457B9D'
+            else return '#70A2C2';
+        }
+        if (cell.terrain === 'sand') return '#F8FC6F';
+        if (cell.terrain === 'grass') {
+            if (cell.elevation < 30) return '#77CF3C';
+            else if (cell.elevation < 70) return '#61B329';
+            else return '#438A13';
+        }
+        if (cell.terrain === 'rock') {
+            if (cell.elevation > 98) return '#E8E8E8'; // snow
+            else return '#A6A2A2';
+        }
+    }
+};
 
 let fps = {
     total: 0,
@@ -24,12 +45,12 @@ const BOUNCE_BORDER = 25;
 
 module.exports = {
     options: {
-        showWater: false,
+        showTerrain: true,
         moving: true,
     },
 
     camera: {
-        zoom: 1.7,
+        zoom: 1.6,
 
         offset: {
             x: 0,
@@ -42,8 +63,8 @@ module.exports = {
         },
 
         direction: {
-            x: 1,
-            y: 0.6,
+            x: 2,
+            y: 1.2,
         },
 
         dims: {
@@ -74,21 +95,23 @@ module.exports = {
     /**
      * Start animating. Should not be called more than once.
      */
-    start: function (map, camera, canvas, options = {}) {
-        console.log(`rendering @ zoom=${camera.zoom}`);
+    start: function (map, canvas, options = {}) {
+        // maybe a good idea?
+        this.camera.zoom = map.dim / 50;
+        this.camera.direction.x /= this.camera.zoom;
+        this.camera.direction.y /= this.camera.zoom;
+
+        // this.camera.zoom = 1.0;
+        console.log(`rendering @ zoom=${this.camera.zoom}`);
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         console.log('canvas size:', canvas.width, canvas.height);
 
-        let context = canvas.getContext('2d');
-
         this.map = map;
         this.ctx = canvas.getContext('2d');
 
-        // setInterval(() => this.camera.offset.x += 10, 1000);
         setInterval(this._bounce.bind(this), 25);
-        // this._bounce();
 
         window.requestAnimationFrame(this._renderFrame.bind(this));
         console.log('rendering started');
@@ -99,20 +122,21 @@ module.exports = {
         // tab because it'll get out of sync with animation (which only occurs in the foreground).
         if (!this.options.moving || document.hidden) return;
 
-        let targetX = this.camera.direction.x + this.camera.transform.x;
-        let targetY = this.camera.direction.y + this.camera.transform.y;
+        let targetX = (this.camera.direction.x * this.camera.zoom) + this.camera.transform.x + this.camera.offset.x;
+        let targetY = (this.camera.direction.y * this.camera.zoom) + this.camera.transform.y + this.camera.offset.y;
 
         // lower limit
         if (targetX > BOUNCE_BORDER && this.camera.direction.x > 0) this.camera.direction.x *= -1;
         if (targetY > BOUNCE_BORDER && this.camera.direction.y > 0) this.camera.direction.y *= -1;
 
         // upper limit
-        // todo: why these magic 100's??
-        if (targetX * -1 > this.camera.dims.primary / this.camera.zoom - BOUNCE_BORDER - 100) this.camera.direction.x *= -1;
-        if (targetY * -1 > this.camera.dims.primary / this.camera.zoom + BOUNCE_BORDER + 100) this.camera.direction.y *= -1;
+        // x limit: fill in the 'zoom gap', multiplied by a ratio of the grid width : screen resolution
+        // y limit: fill in the 'zoom gap'
+        if (targetX < (1 - this.camera.zoom) * Math.pow(this.camera.dims.primary, 2) / this.camera.dims.width) this.camera.direction.x *= -1;
+        if (targetY < (1 - this.camera.zoom) * this.camera.dims.primary - (BOUNCE_BORDER * this.camera.zoom)) this.camera.direction.y *= -1;
 
-        this.camera.offset.x += this.camera.direction.x;
-        this.camera.offset.y += this.camera.direction.y;
+        this.camera.offset.x += this.camera.direction.x * this.camera.zoom;
+        this.camera.offset.y += this.camera.direction.y * this.camera.zoom;
     },
 
     /**
@@ -145,8 +169,8 @@ module.exports = {
 
         // render the visible items
         this.map.grid.filter(this.camera.visible.bind(this)).forEach(function (cell) {
-            if (self.options.showWater && cell.water) self.ctx.fillStyle = 'blue';
-            else self.ctx.fillStyle = colorOf(cell);
+            if (self.options.showTerrain) self.ctx.fillStyle = color.terrain(cell)
+            else self.ctx.fillStyle = color.elevation(cell);
 
             self.ctx.fillRect(cell.x * dimension + 1, cell.y * dimension + 1, dimension - 2, dimension - 2);
         });

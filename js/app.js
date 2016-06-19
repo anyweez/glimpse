@@ -8,41 +8,23 @@ let renderOptions = {
     useCamera: true,
 };
 
-let camera = {
-    zoom: 2.0,
-
-    offset: {
-        x: 0,
-        y: 0,
-    },
-    dims: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-    },
-
-    visible(cell) {
-        // let tl = 
-        return true;
-    },
-}
-
 window.addEventListener('load', function () {
     let game = new world.World(90);
     game.init();
 
-    renderer.start(game, camera, document.getElementById('game'), renderOptions);
+    renderer.start(game, document.getElementById('game'), renderOptions);
 
     // key listener
     window.addEventListener('keyup', function (event) {
         let key = event.keyCode;
 
-        if (key === 87) { // 'w'
+        if (key === 84) { // 'w'
             renderer.update({
-                showWater: !renderer.options.showWater,
+                showTerrain: !renderer.options.showTerrain,
             });
 
-            if (renderer.options.showWater) console.log('showing water');
-            else console.log('hiding water');
+            if (renderer.options.showTerrain) console.log('showing terrain');
+            else console.log('hiding terrain');
         } else if (key === 67) { // 'c'
             // renderer.update({
             //     useCamera: renderer.options.useCamera,
