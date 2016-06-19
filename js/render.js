@@ -95,7 +95,9 @@ module.exports = {
     },
 
     _bounce: function () {
-        if (!this.options.moving) return;
+        // If disabled or in a background tab, don't advance. Don't advance in background
+        // tab because it'll get out of sync with animation (which only occurs in the foreground).
+        if (!this.options.moving || document.hidden) return;
 
         let targetX = this.camera.direction.x + this.camera.transform.x;
         let targetY = this.camera.direction.y + this.camera.transform.y;
