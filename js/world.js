@@ -105,7 +105,7 @@ World.prototype.generateElevations = function () {
     this.find(0, full).elevation = Math.random() * 100;
     this.find(full, full).elevation = Math.random() * 100;
 
-    divide(full, 25);
+    divide(full, 20);
 }
 
 World.prototype.rainfall = function () {
@@ -168,6 +168,27 @@ World.prototype.terrainify = function () {
     }
 };
 
+World.prototype.smoothTerrain = function () {
+    let smoothed = 0;
+
+    this.grid.forEach(cell => {
+        let terrains = new Set(this.neighbors(cell).map(c => c.terrain));
+
+        // If there's only one type of terrain around here, inherit it.
+        if (terrains.size === 1) {
+            let commonTerrain = terrains.values().next().value;
+
+            if (cell.terrain !== commonTerrain) {
+                cell.terrain = commonTerrain;
+                if (cell.terrain === 'water') cell.water = true;
+                smoothed += 1;
+            }
+        }
+    });
+
+    console.log(`Cells smoothed: ${smoothed} / ${this.dim * this.dim} (${100 * smoothed / (this.dim * this.dim)}%)`);
+};
+
 World.prototype.init = function () {
     let checkpoint = Date.now();
     let timing = {};
@@ -190,6 +211,10 @@ World.prototype.init = function () {
 
     this.terrainify();
     timing.terrainify = Date.now() - checkpoint;
+    checkpoint = Date.now();
+
+    this.smoothTerrain();
+    timing.smooth = Date.now() - checkpoint;
     checkpoint = Date.now();
 
     console.log(timing);
