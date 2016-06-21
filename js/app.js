@@ -3,13 +3,16 @@
 let world = require('./world');
 let renderer = require('./render');
 
+// note: currently ignored
 let renderOptions = {
     showWater: false,
     useCamera: true,
 };
 
+const MAP_DETAIL = 8;
+
 window.addEventListener('load', function () {
-    let game = new world.World(90);
+    let game = new world.World(Math.pow(2, MAP_DETAIL) + 1);
     game.init();
 
     renderer.start(game, document.getElementById('game'), renderOptions);
@@ -18,7 +21,7 @@ window.addEventListener('load', function () {
     window.addEventListener('keyup', function (event) {
         let key = event.keyCode;
 
-        if (key === 84) { // 'w'
+        if (key === 84) { // 't'
             renderer.update({
                 showTerrain: !renderer.options.showTerrain,
             });

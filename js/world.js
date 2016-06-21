@@ -51,81 +51,62 @@ World.prototype.neighbors = function (cell) {
     return neighbors;
 }
 
+// New version greatly influenced by this article:
+//   http://www.playfuljs.com/realistic-terrain-in-130-lines/
 World.prototype.generateElevations = function () {
     let self = this;
+    let full = this.dim - 1;
 
-    function midpoint(tl, br) {
-        return self.find(Math.round((tl.x + br.x) / 2), Math.round((tl.y + br.y) / 2));
-    }
+    function divide(size, variance) {
+        let half = size / 2;
 
-    function dropoff(variance) {
-        return variance * 0.9;
-    }
+        // Base case
+        if (half < 1) return;
 
-    function square(tl, tr, bl, br, variance) {
-        let elev = (tl.elevation + tr.elevation + bl.elevation + br.elevation) / 4;
-        let rand = (Math.random() - 0.5) * ELEVATION_NOISE_LEVEL * variance;
-
-        let mid = midpoint(tl, br);
-        mid.elevation = Math.max(0, elev + rand);
-        // mid.elevation = 100;
-
-        // Keep working on smaller and smaller squares
-        if (br.x - mid.x > 1 && br.y - mid.y > 1) {
-            // left diamond
-            diamond(tl, mid, bl, self.find(mid.x - (mid.x - tl.x) * 2, mid.y), dropoff(variance));
-            // top diamond
-            diamond(self.find(mid.x, mid.y - (mid.y - tl.y) * 2), tr, mid, tl, dropoff(variance));
-            // right diamond
-            diamond(tr, self.find(mid.x + (tr.x - mid.x) * 2, mid.y), br, mid, dropoff(variance));
-            // south diamond
-            diamond(mid, br, self.find(mid.x, mid.y + (bl.y - mid.y) * 2), bl, dropoff(variance));
-        } else {
-            // left diamond
-            diamond(tl, mid, bl, self.find(mid.x - 2, mid.y), dropoff(variance), true);
-            // top diamond
-            diamond(self.find(mid.x, mid.y - 2), tr, mid, tl, dropoff(variance), true);
-            // right diamond
-            diamond(tr, self.find(mid.x + 2, mid.y), br, mid, dropoff(variance), true);
-            // bottom diamond
-            diamond(mid, br, self.find(mid.x, mid.y + 2), bl, dropoff(variance), true);
+        for (let y = half; y < full; y += size) {
+            for (let x = half; x < full; x += size) {
+                square(x, y, half, variance);
+            }
         }
+
+        for (let y = 0; y <= full; y += half) {
+            for (let x = (y + half) % size; x <= full; x += size) {
+                diamond(x, y, half, variance);
+            }
+        }
+
+        return divide(size / 2, variance * 0.85);
     }
 
-    function diamond(n, e, s, w, variance, completed = false) {
-        let elev = (n.elevation + e.elevation + s.elevation + w.elevation) / 4;
-        let rand = (Math.random() - 0.5) * 10 * variance;
+    function square(x, y, half, variance) {
+        let tl = self.find(x - half, y - half);
+        let tr = self.find(x + half, y - half);
+        let bl = self.find(x - half, y + half);
+        let br = self.find(x + half, y + half);
 
-        let mid = midpoint({ x: w.x, y: n.y }, { x: e.x, y: s.y });
-        mid.elevation = Math.max(0, elev + rand);
-        // mid.elevation = 100;
+        let avg = [tl, tr, bl, br].map(p => p.elevation / 4).reduce((a, b) => a + b);
 
-        // if (!completed) {
-        if (e.x - mid.x > 1 && s.y - mid.y > 1) {
-            // northeast square
-            square(n, self.find(e.x, n.y), mid, e, dropoff(variance));
-            // southeast square
-            square(mid, e, s, self.find(e.x, s.y), dropoff(variance));
-            // southwest square
-            square(w, mid, self.find(w.x, s.y), s, dropoff(variance));
-            // northwest square
-            square(self.find(w.x, n.y), n, w, mid, dropoff(variance));
-        }
+        self.find(x, y).elevation = avg + (Math.random() - 0.5) * variance;
+    }
+
+    function diamond(x, y, half, variance) {
+        let n = self.find(x, y - half);
+        let e = self.find(x + half, y);
+        let s = self.find(x, y + half);
+        let w = self.find(x - half, y);
+
+        let avg = [n, e, s, w].map(p => p.elevation / 4).reduce((a, b) => a + b);
+
+        self.find(x, y).elevation = avg + (Math.random() - 0.5) * variance;
     }
 
     this.find(0, 0).elevation = Math.random() * 100;
-    this.find(this.dim - 1, 0).elevation = Math.random() * 100;
-    this.find(0, this.dim - 1).elevation = Math.random() * 100;
-    this.find(this.dim - 1, this.dim - 1).elevation = Math.random() * 100;
+    this.find(full, 0).elevation = Math.random() * 100;
+    this.find(0, full).elevation = Math.random() * 100;
+    this.find(full, full).elevation = Math.random() * 100;
 
-    square(
-        this.find(0, 0),                        // top left
-        this.find(this.dim - 1, 0),             // top right
-        this.find(0, this.dim - 1),             // bottom left
-        this.find(this.dim - 1, this.dim - 1),  // bottom right
-        10
-    );
-};
+    divide(full, 25);
+}
 
 World.prototype.rainfall = function () {
     let self = this;
@@ -188,16 +169,31 @@ World.prototype.terrainify = function () {
 };
 
 World.prototype.init = function () {
-    let start = Date.now();
+    let checkpoint = Date.now();
+    let timing = {};
 
     this.generateElevations();
+    timing.elevation = Date.now() - checkpoint;
+    checkpoint = Date.now();
+
     this.aquifer();
+    timing.aquifer = Date.now() - checkpoint;
+    checkpoint = Date.now();
+
     this.rainfall();
+    timing.rainfall = Date.now() - checkpoint;
+    checkpoint = Date.now();
+
     this.evaporate();
+    timing.evaporate = Date.now() - checkpoint;
+    checkpoint = Date.now();
 
     this.terrainify();
+    timing.terrainify = Date.now() - checkpoint;
+    checkpoint = Date.now();
 
-    console.log(`World generated in ${Math.round((Date.now() - start) / 10) / 100} seconds.`)
+    console.log(timing);
+    // console.log(`World generated in ${Math.round((Date.now() - start) / 10) / 100} seconds.`)
 };
 
 function Cell(x, y) {

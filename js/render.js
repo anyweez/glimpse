@@ -97,11 +97,11 @@ module.exports = {
      */
     start: function (map, canvas, options = {}) {
         // maybe a good idea?
-        this.camera.zoom = map.dim / 50;
+        // this.camera.zoom = map.dim / 50;
+        this.camera.zoom = 1.0;
         this.camera.direction.x /= this.camera.zoom;
         this.camera.direction.y /= this.camera.zoom;
 
-        // this.camera.zoom = 1.0;
         console.log(`rendering @ zoom=${this.camera.zoom}`);
 
         canvas.width = window.innerWidth;
@@ -111,7 +111,7 @@ module.exports = {
         this.map = map;
         this.ctx = canvas.getContext('2d');
 
-        setInterval(this._bounce.bind(this), 25);
+        // setInterval(this._bounce.bind(this), 25);
 
         window.requestAnimationFrame(this._renderFrame.bind(this));
         console.log('rendering started');
