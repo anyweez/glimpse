@@ -1,0 +1,32 @@
+@keyframes fadeout {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+#progress {
+    position: absolute;
+    top: 35%;
+    left: 35%;
+
+    width: 30%;
+    background-color: white;
+    border: 3px solid #333;
+    border-radius: 8px;
+
+    text-align: center;
+
+    &.hide {
+        animation: fadeout;
+        animation-duration: .5s;
+        animation-fill-mode: forwards;
+    }
+
+    &.gone {
+        display: none;
+    }
+}

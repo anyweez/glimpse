@@ -1,7 +1,11 @@
 doctype html
 html
     head
+        title glimpse: world simulator
         link(rel='stylesheet',href='css/main.css')
-        script(src="js/app.js")
+        script(src='js/app.js')
     body
-        canvas(id="game")
+        div(id='progress')
+            p(id='progress-indicator') 
+            h2(id='progress-message') Loading... 
+        canvas(id='game')

@@ -152,7 +152,7 @@ World.prototype.terrainify = function () {
     let iteration = 1;
 
     while (changed) {
-        console.log('starting terrainify iter #' + iteration);
+        // console.log('starting terrainify iter #' + iteration);
         changed = false;
 
         this.grid.forEach(cell => {
@@ -189,36 +189,26 @@ World.prototype.smoothTerrain = function () {
     console.log(`Cells smoothed: ${smoothed} / ${this.dim * this.dim} (${100 * smoothed / (this.dim * this.dim)}%)`);
 };
 
-World.prototype.init = function () {
+World.prototype.init = function (events) {
     let checkpoint = Date.now();
     let timing = {};
 
-    this.generateElevations();
-    timing.elevation = Date.now() - checkpoint;
-    checkpoint = Date.now();
+    let jobs = [
+        this.generateElevations.bind(this),
+        this.aquifer.bind(this),
+        this.rainfall.bind(this),
+        this.evaporate.bind(this),
+        this.terrainify.bind(this),
+        this.smoothTerrain.bind(this),
+    ];
 
-    this.aquifer();
-    timing.aquifer = Date.now() - checkpoint;
-    checkpoint = Date.now();
-
-    this.rainfall();
-    timing.rainfall = Date.now() - checkpoint;
-    checkpoint = Date.now();
-
-    this.evaporate();
-    timing.evaporate = Date.now() - checkpoint;
-    checkpoint = Date.now();
-
-    this.terrainify();
-    timing.terrainify = Date.now() - checkpoint;
-    checkpoint = Date.now();
-
-    this.smoothTerrain();
-    timing.smooth = Date.now() - checkpoint;
-    checkpoint = Date.now();
-
-    console.log(timing);
-    // console.log(`World generated in ${Math.round((Date.now() - start) / 10) / 100} seconds.`)
+    // Run all jobs
+    return jobs.reduce((promise, next) => {
+        return promise.then(() => {
+            next();
+            return events.update();
+        });
+    }, Promise.resolve());
 };
 
 function Cell(x, y) {
