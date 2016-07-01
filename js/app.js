@@ -10,7 +10,7 @@ let renderOptions = {
     useCamera: true,
 };
 
-const MAP_DETAIL = 8;
+const MAP_DETAIL = 7;
 
 window.addEventListener('load', function () {
     progress.start([

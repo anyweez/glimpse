@@ -51,7 +51,7 @@ World.prototype.neighbors = function (cell) {
     return neighbors;
 }
 
-// New version greatly influenced by this article:
+// New version greatly influenced / copied from this article:
 //   http://www.playfuljs.com/realistic-terrain-in-130-lines/
 World.prototype.generateElevations = function () {
     let self = this;
@@ -75,7 +75,7 @@ World.prototype.generateElevations = function () {
             }
         }
 
-        return divide(size / 2, variance * 0.85);
+        return divide(size / 2, variance * 0.9);
     }
 
     function square(x, y, half, variance) {

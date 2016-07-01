@@ -52,19 +52,21 @@ module.exports = {
     camera: {
         zoom: 1.6,
 
+        // Assume zoom @ 1.0
         offset: {
             x: 0,
             y: 0,
         },
 
+        // Assume zoom @ 1.0
         transform: {
             x: 0,
             y: 0,
         },
 
         direction: {
-            x: 2,
-            y: 1.2,
+            x: -4,
+            y: -2.4,
         },
 
         dims: {
@@ -81,12 +83,12 @@ module.exports = {
             let pixelY = cell.y * dimension;
 
             // lower bound
-            if (this.camera.transform.x * -1 > pixelX + dimension) return false;
-            if (this.camera.transform.y * -1 > pixelY + dimension) return false;
+            if (this.camera.transform.x > pixelX + dimension) return false;
+            if (this.camera.transform.y > pixelY + dimension) return false;
 
             // upper bound
-            if (this.camera.transform.x * -1 + this.camera.dims.width < pixelX) return false;
-            if (this.camera.transform.y * -1 + this.camera.dims.height < pixelY) return false;
+            if (this.camera.transform.x + this.camera.dims.width < pixelX) return false;
+            if (this.camera.transform.y + this.camera.dims.height < pixelY) return false;
 
             return true;
         },
@@ -97,8 +99,8 @@ module.exports = {
      */
     start: function (map, canvas, options = {}) {
         // maybe a good idea?
-        // this.camera.zoom = map.dim / 50;
-        this.camera.zoom = 1.0;
+        this.camera.zoom = map.dim / 50;
+        // this.camera.zoom = 1.0;
         this.camera.direction.x /= this.camera.zoom;
         this.camera.direction.y /= this.camera.zoom;
 
@@ -111,7 +113,7 @@ module.exports = {
         this.map = map;
         this.ctx = canvas.getContext('2d');
 
-        // setInterval(this._bounce.bind(this), 25);
+        setInterval(this._bounce.bind(this), 25);
 
         window.requestAnimationFrame(this._renderFrame.bind(this));
         console.log('rendering started');
@@ -122,21 +124,19 @@ module.exports = {
         // tab because it'll get out of sync with animation (which only occurs in the foreground).
         if (!this.options.moving || document.hidden) return;
 
-        let targetX = (this.camera.direction.x * this.camera.zoom) + this.camera.transform.x + this.camera.offset.x;
-        let targetY = (this.camera.direction.y * this.camera.zoom) + this.camera.transform.y + this.camera.offset.y;
+        let targetX = this.camera.direction.x + this.camera.transform.x + this.camera.offset.x;
+        let targetY = this.camera.direction.y + this.camera.transform.y + this.camera.offset.y;
 
         // lower limit
-        if (targetX > BOUNCE_BORDER && this.camera.direction.x > 0) this.camera.direction.x *= -1;
-        if (targetY > BOUNCE_BORDER && this.camera.direction.y > 0) this.camera.direction.y *= -1;
+        if (targetX < -1 * BOUNCE_BORDER && this.camera.direction.x < 0) this.camera.direction.x *= -1;
+        if (targetY < -1 * BOUNCE_BORDER && this.camera.direction.y < 0) this.camera.direction.y *= -1;
 
         // upper limit
-        // x limit: fill in the 'zoom gap', multiplied by a ratio of the grid width : screen resolution
-        // y limit: fill in the 'zoom gap'
-        if (targetX < (1 - this.camera.zoom) * Math.pow(this.camera.dims.primary, 2) / this.camera.dims.width) this.camera.direction.x *= -1;
-        if (targetY < (1 - this.camera.zoom) * this.camera.dims.primary - (BOUNCE_BORDER * this.camera.zoom)) this.camera.direction.y *= -1;
+        if (targetX > this.camera.dims.primary * this.camera.zoom - this.camera.dims.width + BOUNCE_BORDER) this.camera.direction.x *= -1;
+        if (targetY > this.camera.dims.primary * this.camera.zoom - this.camera.dims.height + BOUNCE_BORDER) this.camera.direction.y *= -1;
 
-        this.camera.offset.x += this.camera.direction.x * this.camera.zoom;
-        this.camera.offset.y += this.camera.direction.y * this.camera.zoom;
+        this.camera.offset.x += this.camera.direction.x;
+        this.camera.offset.y += this.camera.direction.y;
     },
 
     /**
@@ -149,16 +149,19 @@ module.exports = {
         count_frame();
 
         // clear the canvas
+        // todo: zoom multipliers
         self.ctx.clearRect(
-            this.camera.transform.x * -1,
-            this.camera.transform.y * -1,
+            this.camera.transform.x,
+            this.camera.transform.y,
             this.camera.dims.width,
             this.camera.dims.height
         );
 
         // apply and store the translation
         if (this.camera.offset.x !== 0 || this.camera.offset.y !== 0) {
-            this.ctx.translate(this.camera.offset.x, this.camera.offset.y);
+            // translate moves in the opposite direction vs what i would expect (as someone not great at
+            // linear algebra). invert directions here so that i can use intuitive directions elsewhere.
+            this.ctx.translate(-1 * this.camera.offset.x, -1 * this.camera.offset.y);
 
             this.camera.transform.x += this.camera.offset.x;
             this.camera.transform.y += this.camera.offset.y;
