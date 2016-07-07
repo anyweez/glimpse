@@ -1,19 +1,38 @@
+let _ = require('lodash');
+let species = require('./species');
+
 // How much elevation should randomly vary from its surroundings.
 const ELEVATION_NOISE_LEVEL = 7;
 
 function World(dim) {
     this.dim = dim;
     this.grid = [];
+    // Living populations. Once a population goes extinct it should unregister itself
+    // from this list.
+    this.populations = [];
+    // The queue of populations that should be spawned at the next spawn interval.
+    this.spawns = [];
 
     this.aquiferDepth = 35;
 
     for (let y = 0; y < dim; y++) {
         for (let x = 0; x < dim; x++) {
-            this.grid.push(new Cell(x, y));
+            let cell = new Cell(x, y);
+            cell.world = this;
+
+            this.grid.push(cell);
         }
     }
 
     return this;
+}
+
+/**
+ * Remove a population from the global list if it becomes extinct.
+ */
+World.prototype.extinguish = function (pop) {
+    console.log('extinguishing @ world')
+    this.populations = this.populations.filter(p => p.id !== pop.id);
 }
 
 World.prototype.find = function (x, y) {
@@ -165,6 +184,9 @@ World.prototype.terrainify = function () {
         });
 
         iteration++;
+
+        // Stop after sqrt(dim) iterations.
+        if (iteration > Math.sqrt(this.dim)) return;
     }
 };
 
@@ -190,6 +212,8 @@ World.prototype.smoothTerrain = function () {
 };
 
 World.prototype.init = function (events) {
+    this.sunshine();
+
     let checkpoint = Date.now();
     let timing = {};
 
@@ -211,14 +235,85 @@ World.prototype.init = function (events) {
     }, Promise.resolve());
 };
 
+World.prototype.sunshine = function () {
+    this.grid.forEach(function (cell) {
+        console.log(cell);
+        let sun = new species.RenewablePopulation(cell, {
+            name: 'Sunshine',
+            type: 'energy',
+        });
+
+        this.populations.push(sun);
+        cell.populations.push(sun);
+    }.bind(this));
+};
+
 function Cell(x, y) {
     this.x = x;
     this.y = y;
     this.terrain = null;
     this.elevation = 0; // default, will be replaced with something procedural
     this.water = false;
+    this.populations = [];
+    this.world = null;
 
     return this;
+}
+
+Cell.prototype.extinguish = function (pop) {
+    console.log('extinguishing @ cell')
+    this.populations = this.populations.filter(p => p.id !== pop.id);
+    // Let the world know
+    this.world.extinguish(pop);
+}
+
+/**
+ * Iterate through one 'cycle' of the world. Currently this just calls step() on each
+ * population, though the idea of a world cycle is based around a randomly ordered
+ * task queue that can support tasks of any type.
+ * 
+ * It's currently important that the order of events is random so that certain populations
+ * don't get the advantage on eating, etc just because they're listed first in the array.
+ */
+World.prototype.cycle = function () {
+    console.log('running cycle');
+
+    let tasks = [];
+    // // Every population should take a step
+    this.populations.forEach(pop => tasks.push(pop.step.bind(pop)));
+    // // Call each function in a random order.
+    _.shuffle(tasks).forEach(pop => pop());
+
+    // // Now run each populations end() function to finish the turn
+    tasks = [];
+    this.populations.forEach(pop => tasks.push(pop.end.bind(pop)));
+    // // Call each function in a random order.
+    _.shuffle(tasks).forEach(pop => pop());
+
+    if (this.populations.length > 0) {
+        let pops = this.populations.filter(p => p.type !== 'energy');
+        let show = this.populations.filter(p => {
+            return pops.find(target => target.home.x === p.home.x && target.home.y === p.home.y) !== undefined;
+        })
+
+        console.log(`${pops.length} living populations`);
+        show.forEach(function (pop) {
+            console.log(`  (${pop.home.x}, ${pop.home.y}) ${pop.name}, pop ${pop.population} @ health ${pop.health}`);
+        })
+
+    } else {
+        console.log(`${this.populations.length} living populations`);
+    }
+}
+
+World.prototype.spawn = function () {
+    // if (this.spawns.length === 0) return;
+
+    let i = Math.floor(Math.random() * this.grid.length);
+    let population = new species.Population(this.grid[i]);
+
+    this.populations.push(population);
+    // this.grid[i].populations.push(population);
 }
 
 Cell.prototype.availableTerrains = [

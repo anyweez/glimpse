@@ -10,7 +10,7 @@ let renderOptions = {
     useCamera: true,
 };
 
-const MAP_DETAIL = 7;
+const MAP_DETAIL = 3;
 
 window.addEventListener('load', function () {
     progress.start([
@@ -26,6 +26,10 @@ window.addEventListener('load', function () {
     game.init({
         update: progress.next.bind(progress)
     }).then(function () {
+        // The game takes one step every second
+        setInterval(game.cycle.bind(game), 1000);
+        game.spawn();
+
         renderer.start(game, document.getElementById('game'), renderOptions);
 
         // key listener for settings options
@@ -33,24 +37,13 @@ window.addEventListener('load', function () {
             let key = event.keyCode;
 
             if (key === 84) { // 't'
-                renderer.update({
-                    showTerrain: !renderer.options.showTerrain,
-                });
-
-                if (renderer.options.showTerrain) console.log('showing terrain');
-                else console.log('hiding terrain');
+                renderer.update({ showTerrain: !renderer.options.showTerrain });
             } else if (key === 67) { // 'c'
-                renderer.update({
-                    moving: !renderer.options.moving,
-                });
+                renderer.update({ moving: !renderer.options.moving });
             } else if (key === 187) {
-                renderer.changeCamera({
-                    zoom: renderer.camera.zoom + 0.1,
-                });
+                renderer.changeCamera({ zoom: renderer.camera.zoom + 0.1 });
             } else if (key === 189) {
-                renderer.changeCamera({
-                    zoom: renderer.camera.zoom - 0.1,
-                });
+                renderer.changeCamera({ zoom: renderer.camera.zoom - 0.1 });
             }
         })
     })

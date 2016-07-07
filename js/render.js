@@ -46,7 +46,7 @@ const BOUNCE_BORDER = 25;
 module.exports = {
     options: {
         showTerrain: true,
-        moving: true,
+        moving: false,
     },
 
     camera: {
@@ -65,8 +65,8 @@ module.exports = {
         },
 
         direction: {
-            x: -4,
-            y: -2.4,
+            x: -8,
+            y: -6,
         },
 
         dims: {
@@ -144,9 +144,9 @@ module.exports = {
      */
     _renderFrame: function () {
         let self = this;
-        let dimension = this.camera.zoom * this.camera.dims.primary / this.map.dim;
+        let dimension = Math.floor(this.camera.zoom * this.camera.dims.primary / this.map.dim);
 
-        count_frame();
+        // count_frame();
 
         // clear the canvas
         // todo: zoom multipliers
