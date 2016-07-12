@@ -1,6 +1,16 @@
 let _ = require('lodash');
 let species = require('./species');
 
+//////////////////
+console.warn('Recording historical population data');
+let history = {};
+history.add = function (id, population, health) {
+    if (!this.hasOwnProperty(id)) this[id] = [];
+
+    this[id].push({ id: this[id].length, population: population, health: health });
+};
+//////////////////
+
 // How much elevation should randomly vary from its surroundings.
 const ELEVATION_NOISE_LEVEL = 7;
 
@@ -171,7 +181,6 @@ World.prototype.terrainify = function () {
     let iteration = 1;
 
     while (changed) {
-        // console.log('starting terrainify iter #' + iteration);
         changed = false;
 
         this.grid.forEach(cell => {
@@ -237,35 +246,16 @@ World.prototype.init = function (events) {
 
 World.prototype.sunshine = function () {
     this.grid.forEach(function (cell) {
-        console.log(cell);
         let sun = new species.RenewablePopulation(cell, {
             name: 'Sunshine',
             type: 'energy',
+            population: 10,
+            stats: {
+                mass: 10,
+            }
         });
-
-        this.populations.push(sun);
-        cell.populations.push(sun);
     }.bind(this));
 };
-
-function Cell(x, y) {
-    this.x = x;
-    this.y = y;
-    this.terrain = null;
-    this.elevation = 0; // default, will be replaced with something procedural
-    this.water = false;
-    this.populations = [];
-    this.world = null;
-
-    return this;
-}
-
-Cell.prototype.extinguish = function (pop) {
-    console.log('extinguishing @ cell')
-    this.populations = this.populations.filter(p => p.id !== pop.id);
-    // Let the world know
-    this.world.extinguish(pop);
-}
 
 /**
  * Iterate through one 'cycle' of the world. Currently this just calls step() on each
@@ -291,30 +281,97 @@ World.prototype.cycle = function () {
     _.shuffle(tasks).forEach(pop => pop());
 
     if (this.populations.length > 0) {
-        let pops = this.populations.filter(p => p.type !== 'energy');
-        let show = this.populations.filter(p => {
-            return pops.find(target => target.home.x === p.home.x && target.home.y === p.home.y) !== undefined;
-        })
+        let pops = this.populations.filter(p => p.features.type !== 'energy');
 
-        console.log(`${pops.length} living populations`);
-        show.forEach(function (pop) {
-            console.log(`  (${pop.home.x}, ${pop.home.y}) ${pop.name}, pop ${pop.population} @ health ${pop.health}`);
-        })
+        // Record population values.
+        pops.forEach(pop => history.add(pop.id, pop.population, pop.health));
 
+        // Update population length field in DOM
+        document.getElementById('popcount').textContent = pops.length;
+
+        let tpl = _.template(document.getElementById('population-tpl').innerHTML);
+        let parent = document.getElementById('poplist');
+        parent.innerHTML = '';
+
+        pops.forEach(function (pop) {
+            let el = document.createElement('div');
+            el.classList.add('pop');
+
+            el.innerHTML = tpl({
+                name: `${pop.name} in ${pop.home.terrain}`,
+                x: pop.home.x,
+                y: pop.home.y,
+                population: Math.round(pop.population * 10) / 10,
+                health: Math.round(pop.health * 100) / 100,
+            });
+
+            el.querySelector('.population-chart').setAttribute('id', `pop-${pop.id}`);
+            el.querySelector('.health-chart').setAttribute('id', `health-${pop.id}`);
+            parent.appendChild(el);
+
+            if (history.hasOwnProperty(pop.id)) {
+                // // Create a new line chart object where as first parameter we pass in a selector
+                // // that is resolving to our chart container element. The Second parameter
+                // // is the actual data object.
+                new Chartist.Line(`#pop-${pop.id}`, {
+                    low: 0,
+                    // A labels array that can contain any sort of values
+                    labels: _.takeRight(history[pop.id].map(record => record.id), 25),
+                    // Our series array that contains series objects or in this case series data arrays
+                    series: [
+                        _.takeRight(history[pop.id].map(record => record.population), 25),
+                    ]
+                }, {
+                    axisY: { low: 0, },
+                });
+                new Chartist.Line(`#health-${pop.id}`, {
+                    // A labels array that can contain any sort of values
+                    labels: _.takeRight(history[pop.id].map(record => record.id), 25),
+                    // Our series array that contains series objects or in this case series data arrays
+                    series: [
+                        _.takeRight(history[pop.id].map(record => record.health), 25),
+                    ]
+                }, { 
+                    axisY: { type: Chartist.FixedScaleAxis, high: 1, low: 0, ticks: [0, 0.25, 0.5, 0.75, 1] },
+                });
+            }
+        });
     } else {
         console.log(`${this.populations.length} living populations`);
     }
 }
 
-World.prototype.spawn = function () {
-    // if (this.spawns.length === 0) return;
-
+World.prototype.spawnNext = function () {
     let i = Math.floor(Math.random() * this.grid.length);
     let population = new species.Population(this.grid[i]);
-
-    this.populations.push(population);
-    // this.grid[i].populations.push(population);
 }
+
+function Cell(x, y) {
+    this.x = x;
+    this.y = y;
+    this.terrain = null;
+    this.elevation = 0; // default, will be replaced with something procedural
+    this.water = false;
+    this.populations = [];
+    this.world = null;
+
+    return this;
+}
+
+Cell.prototype.extinguish = function (pop) {
+    console.log('extinguishing @ cell')
+    this.populations = this.populations.filter(p => p.id !== pop.id);
+    // Let the world know
+    this.world.extinguish(pop);
+}
+
+/**
+ * The 'right' way to add a new population to the world.
+ */
+Cell.prototype.spawn = function (pop) {
+    this.populations.push(pop);
+    this.world.populations.push(pop);
+};
 
 Cell.prototype.availableTerrains = [
     {

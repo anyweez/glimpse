@@ -19,7 +19,8 @@
   "devDependencies": {
     "gulp": "^3.9.1",
     "gulp-pug": "^3.0.3",
-    "gulp-sass": "^2.3.2"
+    "gulp-sass": "^2.3.2",
+    "merge-stream": "^1.0.0"
   },
   "dependencies": {
     "lodash": "^4.13.1"
