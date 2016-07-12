@@ -2,7 +2,7 @@ let type = ['water', 'energy', 'plant', 'animal'];
 
 function Population(cell, opt = {}) {
     this.id = Math.floor(Math.random() * 10000);
-    this.name = opt.name || 'Example species';
+    this.name = opt.name || 'Magnus originalis';
     this.population = opt.population || Math.floor(Math.random() * 100);
     this.home = cell;
     this.health = 1.0;
@@ -45,7 +45,7 @@ Population.prototype.step = function () {
      */
     if (this.features.environments.indexOf(this.home.terrain) === -1 &&
         this.features.environments.indexOf('any') === -1) {
-        this.health -= 0.1;
+        this.health -= 0.25;
     }
 
     /**

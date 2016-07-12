@@ -2,13 +2,13 @@ let _ = require('lodash');
 let species = require('./species');
 
 //////////////////
-console.warn('Recording historical population data');
-let history = {};
-history.add = function (id, population, health) {
-    if (!this.hasOwnProperty(id)) this[id] = [];
+// console.warn('Recording historical population data');
+// let history = {};
+// history.add = function (id, population, health) {
+//     if (!this.hasOwnProperty(id)) this[id] = [];
 
-    this[id].push({ id: this[id].length, population: population, health: health });
-};
+//     this[id].push({ id: this[id].length, population: population, health: health });
+// };
 //////////////////
 
 // How much elevation should randomly vary from its surroundings.
@@ -22,6 +22,7 @@ function World(dim) {
     this.populations = [];
     // The queue of populations that should be spawned at the next spawn interval.
     this.spawns = [];
+    this.extinctions = 0;
 
     this.aquiferDepth = 35;
 
@@ -43,6 +44,8 @@ function World(dim) {
 World.prototype.extinguish = function (pop) {
     console.log('extinguishing @ world')
     this.populations = this.populations.filter(p => p.id !== pop.id);
+
+    this.extinctions++;
 }
 
 World.prototype.find = function (x, y) {
@@ -280,6 +283,8 @@ World.prototype.cycle = function () {
     // // Call each function in a random order.
     _.shuffle(tasks).forEach(pop => pop());
 
+    return;
+    /*
     if (this.populations.length > 0) {
         let pops = this.populations.filter(p => p.features.type !== 'energy');
 
@@ -339,11 +344,14 @@ World.prototype.cycle = function () {
     } else {
         console.log(`${this.populations.length} living populations`);
     }
+    */
 }
 
 World.prototype.spawnNext = function () {
     let i = Math.floor(Math.random() * this.grid.length);
     let population = new species.Population(this.grid[i]);
+
+    console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`)
 }
 
 function Cell(x, y) {
