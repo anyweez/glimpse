@@ -1,17 +1,17 @@
-module.exports = function () {
-    let states = [];
-    let current = -1;
+export default function() {
+    let states: Array<string> = [];
+    let current: number = -1;
 
-    let progress = null;
-    let message = null;
-    let indicator = null;
+    let progress: HTMLElement = null;
+    let message: HTMLElement = null;
+    let indicator: HTMLElement = null;
 
     return {
-        start(st) {
+        start(st: Array<string>) {
             states = st;
             progress = document.getElementById('progress');
-            message = progress.querySelector('h2');
-            indicator = progress.querySelector('p');
+            message = <HTMLElement> progress.querySelector('h2');
+            indicator = <HTMLElement> progress.querySelector('p');
 
             this.next();
         },
@@ -19,7 +19,7 @@ module.exports = function () {
         next() {
             current++;
 
-            return new Promise(resolve => {
+            return new Promise<void>(resolve => {
                 if (current > states.length - 1) this._done();
                 else {
                     console.log(`${current} of ${states.length}`);
@@ -34,7 +34,7 @@ module.exports = function () {
             });
         },
 
-        _done() {
+        _done(): void {
             message.innerText = 'Complete';
             this._indicator();
 
@@ -49,8 +49,8 @@ module.exports = function () {
             }, 100);
         },
 
-        _indicator() {
-            let ind = [];
+        _indicator(): void {
+            let ind: Array<string> = [];
             for (let i = 0; i < states.length; i++) {
                 if (current > i) ind.push('	&#9673;');
                 else ind.push('&#9678;');
@@ -58,4 +58,4 @@ module.exports = function () {
             indicator.innerHTML = ind.join(' ');
         },
     };
-}
+};
