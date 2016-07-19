@@ -30,7 +30,7 @@ window.addEventListener('load', function () {
     }).then(function () {
         // The game takes one step every second
         setInterval(game.cycle.bind(game), 1000);
-        // setInterval(game.spawnNext.bind(game), 15000);
+        setInterval(game.spawnNext.bind(game), 5000);
 
         let renderer = new Renderer(game, <HTMLCanvasElement>document.getElementById('game'), renderOptions);
 
@@ -42,12 +42,7 @@ window.addEventListener('load', function () {
                 renderer.update({ showTerrain: !renderer.options.showTerrain });
             } else if (key === 67) { // 'c'
                 renderer.update({ moving: !renderer.options.moving });
-            } 
-            // else if (key === 187) {
-            //     renderer.changeCamera({ zoom: renderer.camera.zoom + 0.1 });
-            // } else if (key === 189) {
-            //     renderer.changeCamera({ zoom: renderer.camera.zoom - 0.1 });
-            // }
+            }
         });
     });
 });

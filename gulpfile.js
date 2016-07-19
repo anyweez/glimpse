@@ -55,7 +55,7 @@ gulp.task('js', ['typescript'], function () {
         .pipe(gulp.dest('./public/js'));
 });
 
-gulp.task('watch', function () {
+gulp.task('watch', ['default'], function () {
     gulp.watch('./*.jade', ['html']);
     gulp.watch('./scss/*.scss', ['css']);
     gulp.watch('./src/*.ts', ['js']);
