@@ -9,21 +9,33 @@ let color = {
     },
 
     terrain: function (cell) {
+        let color = { r: 0, g: 0, b: 0 };
+
         if (cell.terrain === 'water') {
-            if (cell.elevation < 5) return '#1E4F6E';
-            else if (cell.elevation < 15) return '#457B9D'
-            else return '#70A2C2';
+            if (cell.elevation < 5) color = {r: 30, g: 79, b: 110};
+            else if (cell.elevation < 15) color = {r: 69, g: 123, b: 157};
+            else color = {r: 112, g:162, b:194};
         }
-        if (cell.terrain === 'sand') return '#F8FC6F';
-        if (cell.terrain === 'grass') {
-            if (cell.elevation < 30) return '#77CF3C';
-            else if (cell.elevation < 70) return '#61B329';
-            else return '#438A13';
+        else if (cell.terrain === 'sand') color = {r: 248, g: 252, b: 111};
+        else if (cell.terrain === 'grass') {
+            if (cell.elevation < 30) color = {r: 119, g: 207, b: 60};
+            else if (cell.elevation < 70) color = {r: 97, g: 179, b: 41};
+            else color = {r: 67, g: 138, b: 19};
         }
-        if (cell.terrain === 'rock') {
-            if (cell.elevation > 98) return '#E8E8E8'; // snow
-            else return '#A6A2A2';
+        else if (cell.terrain === 'rock') {
+            if (cell.elevation > 98) color = {r: 232, g: 232, b: 232}; // snow
+            else color = {r: 166, g: 162, b: 162};
         }
+
+        // if (cell.populations.length > 1) {
+        //     color.r = Math.round(color.r * 1.5);
+        //     color.g = Math.round(color.g * 1.5);
+        //     color.b = Math.round(color.b * 1.5);
+        // }
+
+        color.a = (cell.populations.length > 1) ? 0.25 : 1;
+
+        return `rgba(${color.r},${color.g},${color.b},${color.a})`;
     }
 };
 

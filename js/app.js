@@ -10,7 +10,7 @@ let renderOptions = {
     useCamera: true,
 };
 
-const MAP_DETAIL = 3;
+const MAP_DETAIL = 4;
 
 window.addEventListener('load', function () {
     progress.start([
@@ -28,7 +28,7 @@ window.addEventListener('load', function () {
     }).then(function () {
         // The game takes one step every second
         setInterval(game.cycle.bind(game), 1000);
-        game.spawn();
+        setInterval(game.spawnNext.bind(game), 15000);
 
         renderer.start(game, document.getElementById('game'), renderOptions);
 
