@@ -37,8 +37,6 @@ export class World {
                 this.grid.push(cell);
             }
         }
-
-        // generateElevations(this);
     }
 
     init({ update }: { update: Function }) {
@@ -76,7 +74,7 @@ export class World {
         this.populations = this.populations.filter(p => p.id !== pop.id);
         this.extinctions++;
 
-        console.log(`A population of ${pop.name} died.`);
+        console.log(`A population of ${pop.name} became part of the earth.`);
     }
 
     /**
@@ -106,6 +104,7 @@ export class World {
         return this.grid[y * this.dim + x];
     }
 
+    // TODO: ambiguity issue between Location and Cell
     neighbors(cell: Location): Array<any> {
         let neighbors: Array<any> = [];
 
@@ -141,11 +140,13 @@ export class World {
         shuffle(tasks).forEach(pop => pop());
     }
 
-    spawnNext() {
+    spawnNext() : Population {
         let i = Math.floor(Math.random() * this.grid.length);
         let population = new Population(this.grid[i]);
 
-        console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`)
+        console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`);
+
+        return population;
     }
 }
 /**
@@ -296,7 +297,7 @@ function smoothTerrain(world: World): void {
 function sunshine(world: World): void {
     world.grid.forEach(function (cell) {
         let sun = new RenewablePopulation(cell, {
-            name: 'Sunshine',
+            name: 'Brittney of the North',
             type: 'energy',
             population: 10,
             stats: {

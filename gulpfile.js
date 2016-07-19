@@ -5,6 +5,7 @@ let sass = require('gulp-sass');
 let pug = require('gulp-pug');
 let browserify = require('gulp-browserify');
 let typescript = require('gulp-typescript');
+// let mocha = require('gulp-mocha');
 let babel = require('gulp-babel');
 let merge = require('merge-stream');
 
@@ -55,8 +56,22 @@ gulp.task('js', ['typescript'], function () {
         .pipe(gulp.dest('./public/js'));
 });
 
+/**
+ * Run tests with Mocha. Glimpse modules use ES6 module syntax so there's a 
+ * build step involved here as well.
+ */
+gulp.task('test', ['js'], function () {
+    return gulp.src('test/*.js')
+        .pipe(babel({
+            presets: ['es2015'],
+        }))
+        .pipe(gulp.dest('tests/'))
+        // .pipe(mocha());
+});
+
 gulp.task('watch', ['default'], function () {
     gulp.watch('./*.jade', ['html']);
     gulp.watch('./scss/*.scss', ['css']);
     gulp.watch('./src/*.ts', ['js']);
+    gulp.watch('./test/*.js', ['test']);
 });
