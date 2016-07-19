@@ -75,6 +75,8 @@ export class World {
     extinguish(pop: Population): void {
         this.populations = this.populations.filter(p => p.id !== pop.id);
         this.extinctions++;
+
+        console.log(`A population of ${pop.name} died.`);
     }
 
     /**

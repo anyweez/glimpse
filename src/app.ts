@@ -30,7 +30,7 @@ window.addEventListener('load', function () {
     }).then(function () {
         // The game takes one step every second
         setInterval(game.cycle.bind(game), 1000);
-        setInterval(game.spawnNext.bind(game), 5000);
+        setInterval(game.spawnNext.bind(game), 15000);
 
         let renderer = new Renderer(game, <HTMLCanvasElement>document.getElementById('game'), renderOptions);
 

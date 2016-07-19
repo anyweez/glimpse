@@ -118,6 +118,9 @@ export class Population {
         let migrants = Math.ceil(this.population * 0.02);
 
         neighbors.forEach(function (neighbor: Cell) {
+            // Random chance to migrate in each direction.
+            if (Math.random() < 0.85) return;
+
             // If the population already exists, combine populations.
             let existing = neighbor.populations.find(pop => pop.name === this.name);
 
