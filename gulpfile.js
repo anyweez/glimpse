@@ -4,7 +4,11 @@ let gulp = require('gulp');
 let sass = require('gulp-sass');
 let pug = require('gulp-pug');
 let browserify = require('gulp-browserify');
+let typescript = require('gulp-typescript');
+let babel = require('gulp-babel');
 let merge = require('merge-stream');
+
+let ts = typescript.createProject('tsconfig.json');
 
 gulp.task('default', ['html', 'css', 'js']);
 
@@ -28,20 +32,31 @@ gulp.task('css', function () {
         .pipe(gulp.dest('./public/css'));
 });
 
-gulp.task('js', function () {
-    let app = gulp.src('./js/app.js')
-        .pipe(browserify())
+/**
+ * Based on Typescript guidance in:
+ * https://www.typescriptlang.org/docs/handbook/gulp.html
+ */
+
+gulp.task('typescript', function () {
+    return ts.src()
+        .pipe(typescript(ts))
+        // I'm transpiling because Browserify can't handle ES6.
+        .js.pipe(babel({
+            presets: ['es2015'],
+        }))
+        .pipe(gulp.dest('./_out'));
+});
+
+gulp.task('js', ['typescript'], function () {
+    return gulp.src('./_out/app.js')
+        .pipe(browserify({
+            sourceType: 'module',
+        }))
         .pipe(gulp.dest('./public/js'));
-
-    let simulation = gulp.src('./js/simulate.js')
-        .pipe(browserify())
-        .pipe(gulp.dest('./public/js'))
-
-    return merge(app, simulation);
 });
 
 gulp.task('watch', function () {
     gulp.watch('./*.jade', ['html']);
     gulp.watch('./scss/*.scss', ['css']);
-    gulp.watch('./js/*.js', ['js']);
+    gulp.watch('./src/*.ts', ['js']);
 });
