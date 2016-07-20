@@ -5,7 +5,6 @@ let sass = require('gulp-sass');
 let pug = require('gulp-pug');
 let browserify = require('gulp-browserify');
 let typescript = require('gulp-typescript');
-// let mocha = require('gulp-mocha');
 let babel = require('gulp-babel');
 let merge = require('merge-stream');
 
@@ -20,14 +19,6 @@ gulp.task('html', function () {
 });
 
 gulp.task('css', function () {
-    let main = gulp.src('./scss/main.scss')
-        .pipe(sass())
-        .pipe(gulp.dest('./public/css'));
-
-    let simulate = gulp.src('./scss/simulate.scss')
-        .pipe(sass())
-        .pipe(gulp.dest('./public/css'));
-
     return gulp.src('./scss/main.scss')
         .pipe(sass())
         .pipe(gulp.dest('./public/css'));
@@ -37,7 +28,6 @@ gulp.task('css', function () {
  * Based on Typescript guidance in:
  * https://www.typescriptlang.org/docs/handbook/gulp.html
  */
-
 gulp.task('typescript', function () {
     return ts.src()
         .pipe(typescript(ts))

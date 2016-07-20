@@ -3,5 +3,7 @@ node_js:
   - "6"
   - "stable"
 before_script:
-  - npm install --global gulp
+  - npm install --global gulp typescript typings mocha istanbul
+  - typings install
 script: npm test
+after_success: npm run coverage
