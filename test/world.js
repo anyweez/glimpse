@@ -7,9 +7,9 @@ import { World } from '../_out/world';
 
 let expect = require('expect.js');
 let dims = {
-    small: 3,
-    medium: 15,
-    large: 50,
+    small: Math.pow(2, 3) + 1,
+    medium: Math.pow(2, 5) + 1,
+    large: Math.pow(2, 8) + 1,
 };
 
 /**
