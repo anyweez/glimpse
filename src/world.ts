@@ -19,8 +19,8 @@ interface Location {
 
 export class World {
     dim: number;
-    grid: Array<Cell>;
-    populations: Array<Population>;     // Living populations
+    grid: Array<Cell> = [];
+    populations: Array<Population> = [];     // Living populations
     extinctions: number = 0;
     // The depth of the aquifer in the world (anything beneath this depth becomes
     // a water tile).
@@ -37,12 +37,10 @@ export class World {
                 this.grid.push(cell);
             }
         }
-
-        generateElevations(this);
     }
 
-    init({ update } : { update: Function }) {
-        sunshine.bind(null, this);
+    init({ update }: { update: Function }) {
+        sunshine(this);
 
         let checkpoint = Date.now();
         let timing = {};
@@ -75,6 +73,8 @@ export class World {
     extinguish(pop: Population): void {
         this.populations = this.populations.filter(p => p.id !== pop.id);
         this.extinctions++;
+
+        console.log(`A population of ${pop.name} became part of the earth.`);
     }
 
     /**
@@ -104,6 +104,7 @@ export class World {
         return this.grid[y * this.dim + x];
     }
 
+    // TODO: ambiguity issue between Location and Cell
     neighbors(cell: Location): Array<any> {
         let neighbors: Array<any> = [];
 
@@ -138,6 +139,15 @@ export class World {
         // // Call each function in a random order.
         shuffle(tasks).forEach(pop => pop());
     }
+
+    spawnNext() : Population {
+        let i = Math.floor(Math.random() * this.grid.length);
+        let population = new Population(this.grid[i]);
+
+        console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`);
+
+        return population;
+    }
 }
 /**
  * World generation functions. These functions are related to generating the *initial state* of the world 
@@ -147,10 +157,10 @@ export class World {
 
 // New version greatly influenced / copied from this article:
 //   http://www.playfuljs.com/realistic-terrain-in-130-lines/
-function generateElevations(world: World) : void {
-    let full = this.dim - 1;
+function generateElevations(world: World): void {
+    let full = world.dim - 1;
 
-    function divide(size: number, variance: number) : void {
+    function divide(size: number, variance: number): void {
         let half = size / 2;
 
         // Base case
@@ -171,7 +181,7 @@ function generateElevations(world: World) : void {
         return divide(size / 2, variance * 0.9);
     }
 
-    function square(x: number, y: number, half: number, variance: number) : void {
+    function square(x: number, y: number, half: number, variance: number): void {
         let tl = world.find(x - half, y - half);
         let tr = world.find(x + half, y - half);
         let bl = world.find(x - half, y + half);
@@ -182,7 +192,7 @@ function generateElevations(world: World) : void {
         world.find(x, y).elevation = avg + (Math.random() - 0.5) * variance;
     }
 
-    function diamond(x: number, y: number, half: number, variance: number) : void {
+    function diamond(x: number, y: number, half: number, variance: number): void {
         let n = world.find(x, y - half);
         let e = world.find(x + half, y);
         let s = world.find(x, y + half);
@@ -203,7 +213,7 @@ function generateElevations(world: World) : void {
 
 function rainfall(world: World) {
     // todo: should return Cell but Location and Cell are getting too interwoven
-    function drip(start: Location) : any {
+    function drip(start: Location): any {
         let lowest = world.neighbors(start).reduce((lowest, next) => {
             if (next.elevation < lowest.elevation && !next.water) return next;
             else return lowest;
@@ -248,7 +258,7 @@ function terrainify(world: World): void {
         changed = false;
 
         world.grid.forEach(cell => {
-            let label = availableTerrains.find(terr => terr.func(cell, this)).label;
+            let label = availableTerrains.find(terr => terr.func(cell, world)).label;
 
             if (cell.terrain !== label) {
                 changed = true;
@@ -259,7 +269,7 @@ function terrainify(world: World): void {
         iteration++;
 
         // Stop after sqrt(dim) iterations for performance reasons.
-        if (iteration > Math.sqrt(this.dim)) return;
+        if (iteration > Math.sqrt(world.dim)) return;
     }
 }
 
@@ -287,7 +297,7 @@ function smoothTerrain(world: World): void {
 function sunshine(world: World): void {
     world.grid.forEach(function (cell) {
         let sun = new RenewablePopulation(cell, {
-            name: 'Sunshine',
+            name: 'Brittney of the North',
             type: 'energy',
             population: 10,
             stats: {
@@ -297,20 +307,13 @@ function sunshine(world: World): void {
     });
 }
 
-// World.prototype.spawnNext = function () {
-//     let i = Math.floor(Math.random() * this.grid.length);
-//     let population = new Population(this.grid[i]);
-
-//     console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`)
-// }
-
 export class Cell implements Location {
     x: number;
     y: number;
     terrain: string = null;
     elevation: number = 0;
     water: boolean = false;
-    populations: Array<Population>;
+    populations: Array<Population> = [];
     world: World;
 
     constructor(x: number, y: number) {
@@ -326,9 +329,10 @@ export class Cell implements Location {
      * @param {Population} the population to add
      * @throws {Exception} if the population already exists in a cell
      */
-    spawn(pop: Population) {
+    spawn(pop: Population) : void {
         if (pop.home !== null) throw Error(`Population ${pop.name} already has a home.`);
 
+        pop.home = this;
         this.populations.push(pop);
         this.world.populations.push(pop);
     }
@@ -339,7 +343,7 @@ export class Cell implements Location {
      * 
      * @param {Population} the population to remove
      */
-    extinguish(pop: Population) {
+    extinguish(pop: Population) : void {
         pop.home = null;
 
         this.populations = this.populations.filter(p => p.id !== pop.id);
@@ -347,24 +351,24 @@ export class Cell implements Location {
     }
 }
 
-let availableTerrains = [{
+let availableTerrains : Array<any> = [{
     label: 'water',
-    func: function (cell: Cell, world: World) : boolean { return cell.water; }
+    func: function (cell: Cell, world: World): boolean { return cell.water; }
 }, {
         label: 'sand',
-        func: function (cell: Cell, world: World) : boolean {
+        func: function (cell: Cell, world: World): boolean {
             let valid = world.neighbors(cell).filter(cell => cell.water || cell.terrain === 'sand').length > 0;
             return valid && cell.elevation - world.aquiferDepth < 10;
         }
     }, {
         label: 'rock',
-        func: function (cell: Cell, world: World) : boolean {
+        func: function (cell: Cell, world: World): boolean {
             return cell.elevation > 90;
         }
     }, {
         // grass is the default unless terrain has another label
         label: 'grass',
-        func: function (cell: Cell, world: World) : boolean {
+        func: function (cell: Cell, world: World): boolean {
             return true;
         }
     }

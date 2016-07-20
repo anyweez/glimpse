@@ -19,14 +19,6 @@ gulp.task('html', function () {
 });
 
 gulp.task('css', function () {
-    let main = gulp.src('./scss/main.scss')
-        .pipe(sass())
-        .pipe(gulp.dest('./public/css'));
-
-    let simulate = gulp.src('./scss/simulate.scss')
-        .pipe(sass())
-        .pipe(gulp.dest('./public/css'));
-
     return gulp.src('./scss/main.scss')
         .pipe(sass())
         .pipe(gulp.dest('./public/css'));
@@ -36,7 +28,6 @@ gulp.task('css', function () {
  * Based on Typescript guidance in:
  * https://www.typescriptlang.org/docs/handbook/gulp.html
  */
-
 gulp.task('typescript', function () {
     return ts.src()
         .pipe(typescript(ts))
@@ -55,8 +46,22 @@ gulp.task('js', ['typescript'], function () {
         .pipe(gulp.dest('./public/js'));
 });
 
-gulp.task('watch', function () {
+/**
+ * Run tests with Mocha. Glimpse modules use ES6 module syntax so there's a 
+ * build step involved here as well.
+ */
+gulp.task('test', ['js'], function () {
+    return gulp.src('test/*.js')
+        .pipe(babel({
+            presets: ['es2015'],
+        }))
+        .pipe(gulp.dest('tests/'))
+        // .pipe(mocha());
+});
+
+gulp.task('watch', ['default'], function () {
     gulp.watch('./*.jade', ['html']);
     gulp.watch('./scss/*.scss', ['css']);
     gulp.watch('./src/*.ts', ['js']);
+    gulp.watch('./test/*.js', ['test']);
 });

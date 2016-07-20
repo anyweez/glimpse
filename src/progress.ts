@@ -6,7 +6,7 @@ export default function() {
     let message: HTMLElement = null;
     let indicator: HTMLElement = null;
 
-    return {
+    let tracker = {
         start(st: Array<string>) {
             states = st;
             progress = document.getElementById('progress');
@@ -20,12 +20,12 @@ export default function() {
             current++;
 
             return new Promise<void>(resolve => {
-                if (current > states.length - 1) this._done();
+                if (current > states.length - 1) tracker._done();
                 else {
                     console.log(`${current} of ${states.length}`);
                     message.innerText = states[current];
 
-                    this._indicator();
+                    tracker._indicator();
 
                     console.log(states[current]);
                 }
@@ -36,7 +36,7 @@ export default function() {
 
         _done(): void {
             message.innerText = 'Complete';
-            this._indicator();
+            tracker._indicator();
 
             // First timeout triggers fade effect. Second one actually changed the
             // display type so that the element won't capture any events, etc.
@@ -58,4 +58,6 @@ export default function() {
             indicator.innerHTML = ind.join(' ');
         },
     };
+
+    return tracker;
 };

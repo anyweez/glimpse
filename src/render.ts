@@ -28,12 +28,6 @@ let color = {
             else color = { r: 166, g: 162, b: 162, a: 0 };
         }
 
-        // if (cell.populations.length > 1) {
-        //     color.r = Math.round(color.r * 1.5);
-        //     color.g = Math.round(color.g * 1.5);
-        //     color.b = Math.round(color.b * 1.5);
-        // }
-
         color.a = (cell.populations.length > 1) ? 0.25 : 1;
 
         return `rgba(${color.r},${color.g},${color.b},${color.a})`;
@@ -71,7 +65,28 @@ export class Renderer {
         showWater: true,
         moving: false,
     };
-    camera: Camera;
+    // Camera settings will be updated in the constructor. Semi-reasonable default here but
+    // shouldn't really be used without further configuration (via constructor).
+    camera: Camera = {
+        zoom: 1.0,
+        direction: {
+            x: 6,
+            y: 4,
+        },
+        offset: {
+            x: 0,
+            y: 0,
+        },
+        transform: {
+            x: 0,
+            y: 0,
+        },
+        dims: {
+            width: 600,
+            height: 400,
+            primary: 400,
+        },
+    };
 
     constructor(map: World, canvas: HTMLCanvasElement, options: CameraOptions) {
         this.world = map;
