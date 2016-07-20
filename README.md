@@ -1,6 +1,8 @@
 # Glimpse
 ## Procedural world generation
 
+![travis build status](https://travis-ci.org/anyweez/glimpse.svg?branch=master)
+
 I've wanted to generate my own virtual worlds for a long time but haven't had much background on how to pursue it. This project is still young
 but is currently tackling terrain generation along with some camera work to provide beautiful fly-by's over my grid world. I'm intentionally not
 using any libraries and am focusing on balancing the quality of the output with performance whenever possible.
