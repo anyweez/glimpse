@@ -1,4 +1,5 @@
 import { Cell } from './world';
+import { Terrain } from './terrain';
 
 let type: Array<string> = ['water', 'energy', 'plant', 'animal'];
 
@@ -19,7 +20,7 @@ export class Population {
             choiceOf: [],
             quantity: 2,
         },
-        environments: ['grass', 'sand'],
+        environments: [Terrain.GRASS, Terrain.SAND],
         stats: {
             mass: Math.floor(Math.random() * 100),
             reproduction: 3,
@@ -53,7 +54,7 @@ export class Population {
         // If the population is in a habitat they can't suvive in, they take a hard
         // hit to their health.
         if (this.features.environments.indexOf(this.home.terrain) === -1 &&
-            this.features.environments.indexOf('any') === -1) {
+            this.features.environments.indexOf(Terrain.ANY) === -1) {
             this.health -= 0.25;
         }
 
@@ -204,7 +205,7 @@ interface PopulationFeatures {
     dies: boolean;
     type: string;
     diet: PopulationDiet;
-    environments: Array<string>;
+    environments: Array<number>;
     stats: PopulationStats;
 }
 

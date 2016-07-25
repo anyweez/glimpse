@@ -3,6 +3,7 @@
 // let _ = require('lodash');
 import { shuffle } from 'lodash';
 import { Population, RenewablePopulation } from './species';
+import { Terrain, available } from './terrain';
 
 // How much elevation should randomly vary from its surroundings.
 const ELEVATION_NOISE_LEVEL = 7;
@@ -128,7 +129,7 @@ export class World {
      */
     cycle(): void {
         console.log('running cycle');
-        
+
         let tasks: Array<Function> = [];
         // Every population should take a step
         this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.step.bind(pop)));
@@ -142,7 +143,7 @@ export class World {
         shuffle(tasks).forEach(pop => pop());
     }
 
-    spawnNext() : Population {
+    spawnNext(): Population {
         let i = Math.floor(Math.random() * this.grid.length);
         let population = new Population(this.grid[i]);
 
@@ -260,7 +261,7 @@ function terrainify(world: World): void {
         changed = false;
 
         world.grid.forEach(cell => {
-            let label = availableTerrains.find(terr => terr.func(cell, world)).label;
+            let label = available.find(terr => terr.func(cell, world)).label;
 
             if (cell.terrain !== label) {
                 changed = true;
@@ -287,7 +288,7 @@ function smoothTerrain(world: World): void {
 
             if (cell.terrain !== commonTerrain) {
                 cell.terrain = commonTerrain;
-                if (cell.terrain === 'water') cell.water = true;
+                if (cell.terrain === Terrain.WATER) cell.water = true;
                 smoothed += 1;
             }
         }
@@ -312,7 +313,7 @@ function sunshine(world: World): void {
 export class Cell implements Location {
     x: number;
     y: number;
-    terrain: string = null;
+    terrain: number = -1;
     elevation: number = 0;
     water: boolean = false;
     populations: Array<Population> = [];
@@ -331,7 +332,7 @@ export class Cell implements Location {
      * @param {Population} the population to add
      * @throws {Exception} if the population already exists in a cell
      */
-    spawn(pop: Population) : void {
+    spawn(pop: Population): void {
         if (pop.home !== null) throw Error(`Population ${pop.name} already has a home.`);
 
         pop.home = this;
@@ -345,33 +346,10 @@ export class Cell implements Location {
      * 
      * @param {Population} the population to remove
      */
-    extinguish(pop: Population) : void {
+    extinguish(pop: Population): void {
         pop.home = null;
 
         this.populations = this.populations.filter(p => p.id !== pop.id);
         this.world.extinguish(pop);
     }
 }
-
-let availableTerrains : Array<any> = [{
-    label: 'water',
-    func: function (cell: Cell, world: World): boolean { return cell.water; }
-}, {
-        label: 'sand',
-        func: function (cell: Cell, world: World): boolean {
-            let valid = world.neighbors(cell).filter(cell => cell.water || cell.terrain === 'sand').length > 0;
-            return valid && cell.elevation - world.aquiferDepth < 10;
-        }
-    }, {
-        label: 'rock',
-        func: function (cell: Cell, world: World): boolean {
-            return cell.elevation > 90;
-        }
-    }, {
-        // grass is the default unless terrain has another label
-        label: 'grass',
-        func: function (cell: Cell, world: World): boolean {
-            return true;
-        }
-    }
-];

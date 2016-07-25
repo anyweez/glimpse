@@ -4,7 +4,8 @@
         "src/progress.ts",
         "src/render.ts",
         "src/species.ts",
-        "src/world.ts"
+        "src/world.ts",
+        "src/terrain.ts"
     ],
     "compilerOptions": {
         "noImplicitAny": true,

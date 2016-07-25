@@ -1,4 +1,5 @@
 import { World, Cell } from './world';
+import { Terrain, colorize } from './terrain';
 
 let color = {
     elevation(cell: Cell): string {
@@ -10,24 +11,7 @@ let color = {
     },
 
     terrain(cell: Cell): string {
-        let color = { r: 0, g: 0, b: 0, a: 0 };
-
-        if (cell.terrain === 'water') {
-            if (cell.elevation < 5) color = { r: 30, g: 79, b: 110, a: 0 };
-            else if (cell.elevation < 15) color = { r: 69, g: 123, b: 157, a: 0 };
-            else color = { r: 112, g: 162, b: 194, a: 0 };
-        }
-        else if (cell.terrain === 'sand') color = { r: 248, g: 252, b: 111, a: 0 };
-        else if (cell.terrain === 'grass') {
-            if (cell.elevation < 30) color = { r: 119, g: 207, b: 60, a: 0 };
-            else if (cell.elevation < 70) color = { r: 97, g: 179, b: 41, a: 0 };
-            else color = { r: 67, g: 138, b: 19, a: 0 };
-        }
-        else if (cell.terrain === 'rock') {
-            if (cell.elevation > 98) color = { r: 232, g: 232, b: 232, a: 0 }; // snow
-            else color = { r: 166, g: 162, b: 162, a: 0 };
-        }
-
+        let color = colorize(cell);
         color.a = (cell.populations.length > 1) ? 0.25 : 1;
 
         return `rgba(${color.r},${color.g},${color.b},${color.a})`;
@@ -47,6 +31,7 @@ export interface CameraOptions {
 
 interface Camera {
     zoom: number;
+    // A vector describing the direction and speed that the camera is moving.
     direction: { x: number, y: number };
     // Assume zoom @ 1.0
     offset: { x: number, y: number };

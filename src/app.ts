@@ -12,7 +12,7 @@ let renderOptions: CameraOptions = {
 };
 
 let track = progress();
-const MAP_DETAIL: number = 10;
+const MAP_DETAIL: number = 8;
 
 window.addEventListener('load', function () {
     track.start([
