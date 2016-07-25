@@ -12,7 +12,7 @@ let renderOptions: CameraOptions = {
 };
 
 let track = progress();
-const MAP_DETAIL: number = 4;
+const MAP_DETAIL: number = 10;
 
 window.addEventListener('load', function () {
     track.start([
@@ -29,7 +29,7 @@ window.addEventListener('load', function () {
         update: track.next.bind(progress)
     }).then(function () {
         // The game takes one step every second
-        setInterval(game.cycle.bind(game), 1000);
+        setInterval(game.cycle.bind(game), 3000);
         setInterval(game.spawnNext.bind(game), 15000);
 
         let renderer = new Renderer(game, <HTMLCanvasElement>document.getElementById('game'), renderOptions);
@@ -38,11 +38,8 @@ window.addEventListener('load', function () {
         window.addEventListener('keyup', function (event) {
             let key = event.keyCode;
 
-            if (key === 84) { // 't'
-                renderer.update({ showTerrain: !renderer.options.showTerrain });
-            } else if (key === 67) { // 'c'
-                renderer.update({ moving: !renderer.options.moving });
-            }
+            if (key === 84) renderer.update({ showTerrain: !renderer.options.showTerrain });
+            else if (key === 67) renderer.update({ moving: !renderer.options.moving });
         });
     });
 });

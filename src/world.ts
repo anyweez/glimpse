@@ -123,20 +123,22 @@ export class World {
      * 
      * It's currently important that the order of events is random so that certain populations
      * don't get the advantage on eating, etc just because they're listed first in the array.
+     * 
+     * TODO: keep track of active populations between cycles (maybe)
      */
     cycle(): void {
         console.log('running cycle');
-
+        
         let tasks: Array<Function> = [];
-        // // Every population should take a step
-        this.populations.forEach(pop => tasks.push(pop.step.bind(pop)));
-        // // Call each function in a random order.
+        // Every population should take a step
+        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.step.bind(pop)));
+        // Call each function in a random order.
         shuffle(tasks).forEach(pop => pop());
 
-        // // Now run each populations end() function to finish the turn
+        // Now run each populations end() function to finish the turn
         tasks = [];
-        this.populations.forEach(pop => tasks.push(pop.end.bind(pop)));
-        // // Call each function in a random order.
+        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.end.bind(pop)));
+        // Call each function in a random order.
         shuffle(tasks).forEach(pop => pop());
     }
 

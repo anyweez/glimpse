@@ -4,6 +4,8 @@ let type: Array<string> = ['water', 'energy', 'plant', 'animal'];
 
 export class Population {
     id: number;
+    // Whether this population should get a turn each world cycle
+    active: boolean;
     name: string;
     // The count of this species in this cell.
     population: number;
@@ -30,6 +32,7 @@ export class Population {
         this.name = options.name || 'Magnus originalis';
         this.population = options.population || Math.floor(Math.random() * 100);
         this.health = 1.0;
+        this.active = true;
 
         // Configure the population features.
         if (options.dies) this.features.dies = options.dies;
@@ -226,8 +229,10 @@ export class RenewablePopulation extends Population {
 
         super(cell, opt);
         this.stablePop = this.population;
+        this.active = false;
     }
 
+    // Will never get called since active = false
     step() { }
     migration() { }
     end() { }

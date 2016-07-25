@@ -161,7 +161,6 @@ export class Renderer {
         let dimension = Math.floor(this.camera.zoom * this.camera.dims.primary / this.world.dim);
 
         // clear the canvas
-        // todo: zoom multipliers
         self.context.clearRect(
             this.camera.transform.x,
             this.camera.transform.y,
