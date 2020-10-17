@@ -1,9 +1,7 @@
 {
-    "files": [
-        "src/app.ts",
-        "src/progress.ts",
-        "src/world.ts",
-        "src/terrain.ts"
+    "include": [
+        "src/generator/*.ts",
+        "src/renderer/*.ts"
     ],
     "compilerOptions": {
         "noImplicitAny": true,

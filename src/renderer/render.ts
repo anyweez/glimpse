@@ -1,5 +1,5 @@
-import { World, Cell } from './world';
-import { Terrain, colorize } from './terrain';
+import { World, Cell } from '../generator/world';
+import { Terrain, colorize } from '../generator/terrain';
 
 let color = {
     elevation(cell: Cell): string {

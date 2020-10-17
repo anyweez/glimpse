@@ -1,8 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-// let _ = require('lodash');
-// import { shuffle } from 'lodash';
-// import { Population, RenewablePopulation } from './species';
 var terrain_1 = require("./terrain");
 // How much elevation should randomly vary from its surroundings.
 var ELEVATION_NOISE_LEVEL = 7;
@@ -10,10 +7,8 @@ var AQUIFER_DEPTH = 35;
 var World = /** @class */ (function () {
     function World(dim) {
         this.grid = [];
-        // populations: Array<Population> = [];     // Living populations
-        this.extinctions = 0;
-        // The depth of the aquifer in the world (anything beneath this depth becomes
-        // a water tile).
+        // The depth of the aquifer in the world.
+        // Anything beneath this depth becomes a water tile.
         this.aquiferDepth = AQUIFER_DEPTH;
         this.dim = dim;
         for (var y = 0; y < dim; y++) {
@@ -25,10 +20,7 @@ var World = /** @class */ (function () {
         }
     }
     World.prototype.init = function (_a) {
-        // sunshine(this);
         var update = _a.update;
-        // let checkpoint = Date.now();
-        // let timing = {};
         var steps = [
             generateElevations.bind(null, this),
             aquifer.bind(null, this),
@@ -46,18 +38,6 @@ var World = /** @class */ (function () {
         }, Promise.resolve());
     };
     ;
-    /**
-     * Remove a population from the global list if it becomes extinct. This function should
-     * usually be invoked from the cell first (which will automatically call it on the World
-     * as well).
-     *
-     * @param {Population} the population to remove
-     */
-    // extinguish(pop: Population): void {
-    //     this.populations = this.populations.filter(p => p.id !== pop.id);
-    //     this.extinctions++;
-    //     console.log(`A population of ${pop.name} became part of the earth.`);
-    // }
     /**
      * Finds and returns a particular Cell (or Location). A Cell emulator is not a real cell
      * object but contains most of the important properties; they simulate wraparound and other
@@ -220,18 +200,6 @@ function smoothTerrain(world) {
     });
     console.log("Cells smoothed: " + smoothed + " / " + world.dim * world.dim + " (" + 100 * smoothed / (world.dim * world.dim) + "%)");
 }
-// function sunshine(world: World): void {
-//     world.grid.forEach(function (cell) {
-//         let sun = new RenewablePopulation(cell, {
-//             name: 'Brittney of the North',
-//             type: 'energy',
-//             population: 10,
-//             stats: {
-//                 mass: 10,
-//             }
-//         });
-//     });
-// }
 var Cell = /** @class */ (function () {
     function Cell(x, y) {
         this.terrain = -1;
