@@ -12,7 +12,7 @@ let color = {
 
     terrain(cell: Cell): string {
         let color = colorize(cell);
-        color.a = (cell.populations.length > 1) ? 0.25 : 1;
+        // color.a = (cell.populations.length > 1) ? 0.25 : 1;
 
         return `rgba(${color.r},${color.g},${color.b},${color.a})`;
     }
