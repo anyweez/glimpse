@@ -2,8 +2,6 @@
     "files": [
         "src/app.ts",
         "src/progress.ts",
-        "src/render.ts",
-        "src/species.ts",
         "src/world.ts",
         "src/terrain.ts"
     ],
@@ -11,7 +9,6 @@
         "noImplicitAny": true,
         "target": "es6",
 	    "module": "es6",
-	    "declarationFiles": false,
         "noEmitOnError": true
     }
 }

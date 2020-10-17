@@ -1,8 +1,6 @@
-/// <reference path="../typings/modules/lodash/index.d.ts" />
-
 // let _ = require('lodash');
-import { shuffle } from 'lodash';
-import { Population, RenewablePopulation } from './species';
+// import { shuffle } from 'lodash';
+// import { Population, RenewablePopulation } from './species';
 import { Terrain, available } from './terrain';
 
 // How much elevation should randomly vary from its surroundings.
@@ -21,7 +19,7 @@ interface Location {
 export class World {
     dim: number;
     grid: Array<Cell> = [];
-    populations: Array<Population> = [];     // Living populations
+    // populations: Array<Population> = [];     // Living populations
     extinctions: number = 0;
     // The depth of the aquifer in the world (anything beneath this depth becomes
     // a water tile).
@@ -41,12 +39,12 @@ export class World {
     }
 
     init({ update }: { update: Function }) {
-        sunshine(this);
+        // sunshine(this);
 
-        let checkpoint = Date.now();
-        let timing = {};
+        // let checkpoint = Date.now();
+        // let timing = {};
 
-        let jobs = [
+        const steps = [
             generateElevations.bind(null, this),
             aquifer.bind(null, this),
             rainfall.bind(null, this),
@@ -55,8 +53,8 @@ export class World {
             smoothTerrain.bind(null, this),
         ];
 
-        // Run all jobs
-        return jobs.reduce((promise, next) => {
+        // Run all steps
+        return steps.reduce((promise, next) => {
             return promise.then(() => {
                 next();
                 return update();
@@ -71,12 +69,12 @@ export class World {
      * 
      * @param {Population} the population to remove
      */
-    extinguish(pop: Population): void {
-        this.populations = this.populations.filter(p => p.id !== pop.id);
-        this.extinctions++;
+    // extinguish(pop: Population): void {
+    //     this.populations = this.populations.filter(p => p.id !== pop.id);
+    //     this.extinctions++;
 
-        console.log(`A population of ${pop.name} became part of the earth.`);
-    }
+    //     console.log(`A population of ${pop.name} became part of the earth.`);
+    // }
 
     /**
      * Finds and returns a particular Cell (or Location). A Cell emulator is not a real cell 
@@ -127,30 +125,30 @@ export class World {
      * 
      * TODO: keep track of active populations between cycles (maybe)
      */
-    cycle(): void {
-        console.log('running cycle');
+    // cycle(): void {
+    //     console.log('running cycle');
 
-        let tasks: Array<Function> = [];
-        // Every population should take a step
-        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.step.bind(pop)));
-        // Call each function in a random order.
-        shuffle(tasks).forEach(pop => pop());
+    //     let tasks: Array<Function> = [];
+    //     // Every population should take a step
+    //     this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.step.bind(pop)));
+    //     // Call each function in a random order.
+    //     shuffle(tasks).forEach(pop => pop());
 
-        // Now run each populations end() function to finish the turn
-        tasks = [];
-        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.end.bind(pop)));
-        // Call each function in a random order.
-        shuffle(tasks).forEach(pop => pop());
-    }
+    //     // Now run each populations end() function to finish the turn
+    //     tasks = [];
+    //     this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.end.bind(pop)));
+    //     // Call each function in a random order.
+    //     shuffle(tasks).forEach(pop => pop());
+    // }
 
-    spawnNext(): Population {
-        let i = Math.floor(Math.random() * this.grid.length);
-        let population = new Population(this.grid[i]);
+    // spawnNext(): Population {
+    //     let i = Math.floor(Math.random() * this.grid.length);
+    //     let population = new Population(this.grid[i]);
 
-        console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`);
+    //     console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`);
 
-        return population;
-    }
+    //     return population;
+    // }
 }
 /**
  * World generation functions. These functions are related to generating the *initial state* of the world 
@@ -297,18 +295,18 @@ function smoothTerrain(world: World): void {
     console.log(`Cells smoothed: ${smoothed} / ${world.dim * world.dim} (${100 * smoothed / (world.dim * world.dim)}%)`);
 }
 
-function sunshine(world: World): void {
-    world.grid.forEach(function (cell) {
-        let sun = new RenewablePopulation(cell, {
-            name: 'Brittney of the North',
-            type: 'energy',
-            population: 10,
-            stats: {
-                mass: 10,
-            }
-        });
-    });
-}
+// function sunshine(world: World): void {
+//     world.grid.forEach(function (cell) {
+//         let sun = new RenewablePopulation(cell, {
+//             name: 'Brittney of the North',
+//             type: 'energy',
+//             population: 10,
+//             stats: {
+//                 mass: 10,
+//             }
+//         });
+//     });
+// }
 
 export class Cell implements Location {
     x: number;
@@ -316,7 +314,7 @@ export class Cell implements Location {
     terrain: number = -1;
     elevation: number = 0;
     water: boolean = false;
-    populations: Array<Population> = [];
+    // populations: Array<Population> = [];
     world: World;
 
     constructor(x: number, y: number) {
@@ -332,13 +330,13 @@ export class Cell implements Location {
      * @param {Population} the population to add
      * @throws {Exception} if the population already exists in a cell
      */
-    spawn(pop: Population): void {
-        if (pop.home !== null) throw Error(`Population ${pop.name} already has a home.`);
+    // spawn(pop: Population): void {
+    //     if (pop.home !== null) throw Error(`Population ${pop.name} already has a home.`);
 
-        pop.home = this;
-        this.populations.push(pop);
-        this.world.populations.push(pop);
-    }
+    //     pop.home = this;
+    //     this.populations.push(pop);
+    //     this.world.populations.push(pop);
+    // }
 
     /**
      * Remove the specified population from the cell. Automatically invokes the same function on
@@ -346,10 +344,10 @@ export class Cell implements Location {
      * 
      * @param {Population} the population to remove
      */
-    extinguish(pop: Population): void {
-        pop.home = null;
+    // extinguish(pop: Population): void {
+    //     pop.home = null;
 
-        this.populations = this.populations.filter(p => p.id !== pop.id);
-        this.world.extinguish(pop);
-    }
+    //     this.populations = this.populations.filter(p => p.id !== pop.id);
+    //     this.world.extinguish(pop);
+    // }
 }
