@@ -3,10 +3,9 @@
  * Tests for World class.
  */
 
-import { World, Cell } from '../_out/world';
-import { Population } from '../_out/species';
-
-let expect = require('expect.js');
+const { World, Cell } = require('../dist/generator/world');
+const { Terrain } = require('../dist/generator/terrain');
+const expect = require('expect.js');
 
 const WORLD_DIM = Math.pow(2, 4) + 1;
 
@@ -23,7 +22,7 @@ let output = {
 };
 
 describe('Cell', function () {
-    this.timeout(5000);
+    // this.timeout(5000);
 
     let world = null;
     beforeEach(function () {
@@ -46,38 +45,38 @@ describe('Cell', function () {
             expect(cell.y).to.be.a.number;
             expect(cell.y).to.be.lessThan(world.dim);
 
-            expect(['grass', 'water', 'sand', 'rock']).to.contain(cell.terrain);
+            expect(Object.values(Terrain)).to.contain(cell.terrain);
         }
     });
 
-    it('can spawn and remove a population', function () {
-        let cell = world.find(1, 1);
-        let pop = new Population(cell);
+    // it('can spawn and remove a population', function () {
+    //     let cell = world.find(1, 1);
+    //     let pop = new Population(cell);
 
-        expect(cell.populations).to.have.length(2);
-        expect(pop.home).to.be.equal(cell);
+    //     expect(cell.populations).to.have.length(2);
+    //     expect(pop.home).to.be.equal(cell);
 
-        output.disable();
-        pop.extinguish();
-        output.enable();
+    //     output.disable();
+    //     pop.extinguish();
+    //     output.enable();
 
-        expect(cell.populations).to.have.length(1);
-        expect(pop.home).to.be.equal(null);
-    });
+    //     expect(cell.populations).to.have.length(1);
+    //     expect(pop.home).to.be.equal(null);
+    // });
 
-    it('spawning the same population twice should throw an exception', function () {
-        let cell = world.find(1, 1);
-        let pop = new Population(cell);
+    // it('spawning the same population twice should throw an exception', function () {
+    //     let cell = world.find(1, 1);
+    //     let pop = new Population(cell);
 
-        try {
-            // Second spawn (first is in the Population constructor)
-            cell.spawn(pop);
+    //     try {
+    //         // Second spawn (first is in the Population constructor)
+    //         cell.spawn(pop);
 
-            // Fail if an exception isn't thrown.
-            // todo: check if there's a clearer way to do this.
-            expect(true).to.be.equal(false);
-        } catch (Exception) {}
-    });
+    //         // Fail if an exception isn't thrown.
+    //         // todo: check if there's a clearer way to do this.
+    //         expect(true).to.be.equal(false);
+    //     } catch (Exception) {}
+    // });
     // spawn()'ing after a pop has been added should throw an exception
 
 });

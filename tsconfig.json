@@ -1,17 +1,13 @@
 {
-    "files": [
-        "src/app.ts",
-        "src/progress.ts",
-        "src/render.ts",
-        "src/species.ts",
-        "src/world.ts",
-        "src/terrain.ts"
+    "include": [
+        "src/generator/*.ts",
+        "src/renderer/*.ts"
     ],
     "compilerOptions": {
         "noImplicitAny": true,
-        "target": "es6",
-	    "module": "es6",
-	    "declarationFiles": false,
+        "outDir": "dist/",
+        "target": "es5",
+	    "module": "commonjs",
         "noEmitOnError": true
     }
 }

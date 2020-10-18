@@ -1,8 +1,3 @@
-/// <reference path="../typings/modules/lodash/index.d.ts" />
-
-// let _ = require('lodash');
-import { shuffle } from 'lodash';
-import { Population, RenewablePopulation } from './species';
 import { Terrain, available } from './terrain';
 
 // How much elevation should randomly vary from its surroundings.
@@ -21,10 +16,8 @@ interface Location {
 export class World {
     dim: number;
     grid: Array<Cell> = [];
-    populations: Array<Population> = [];     // Living populations
-    extinctions: number = 0;
-    // The depth of the aquifer in the world (anything beneath this depth becomes
-    // a water tile).
+    // The depth of the aquifer in the world.
+    // Anything beneath this depth becomes a water tile.
     aquiferDepth: number = AQUIFER_DEPTH;
 
     constructor(dim: number) {
@@ -41,12 +34,7 @@ export class World {
     }
 
     init({ update }: { update: Function }) {
-        sunshine(this);
-
-        let checkpoint = Date.now();
-        let timing = {};
-
-        let jobs = [
+        const steps = [
             generateElevations.bind(null, this),
             aquifer.bind(null, this),
             rainfall.bind(null, this),
@@ -55,28 +43,14 @@ export class World {
             smoothTerrain.bind(null, this),
         ];
 
-        // Run all jobs
-        return jobs.reduce((promise, next) => {
+        // Run all steps
+        return steps.reduce((promise, next) => {
             return promise.then(() => {
                 next();
                 return update();
             });
         }, Promise.resolve());
     };
-
-    /**
-     * Remove a population from the global list if it becomes extinct. This function should 
-     * usually be invoked from the cell first (which will automatically call it on the World 
-     * as well).
-     * 
-     * @param {Population} the population to remove
-     */
-    extinguish(pop: Population): void {
-        this.populations = this.populations.filter(p => p.id !== pop.id);
-        this.extinctions++;
-
-        console.log(`A population of ${pop.name} became part of the earth.`);
-    }
 
     /**
      * Finds and returns a particular Cell (or Location). A Cell emulator is not a real cell 
@@ -116,42 +90,8 @@ export class World {
 
         return neighbors;
     }
-
-    /**
-     * Iterate through one 'cycle' of the world. Currently this just calls step() on each
-     * population, though the idea of a world cycle is based around a randomly ordered
-     * task queue that can support tasks of any type.
-     * 
-     * It's currently important that the order of events is random so that certain populations
-     * don't get the advantage on eating, etc just because they're listed first in the array.
-     * 
-     * TODO: keep track of active populations between cycles (maybe)
-     */
-    cycle(): void {
-        console.log('running cycle');
-
-        let tasks: Array<Function> = [];
-        // Every population should take a step
-        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.step.bind(pop)));
-        // Call each function in a random order.
-        shuffle(tasks).forEach(pop => pop());
-
-        // Now run each populations end() function to finish the turn
-        tasks = [];
-        this.populations.filter(pop => pop.active).forEach(pop => tasks.push(pop.end.bind(pop)));
-        // Call each function in a random order.
-        shuffle(tasks).forEach(pop => pop());
-    }
-
-    spawnNext(): Population {
-        let i = Math.floor(Math.random() * this.grid.length);
-        let population = new Population(this.grid[i]);
-
-        console.log(`Spawned ${population.name} at (${this.grid[i].x}, ${this.grid[i].y})`);
-
-        return population;
-    }
 }
+
 /**
  * World generation functions. These functions are related to generating the *initial state* of the world 
  * less than evolutions beyond the initial state. They primarily revolve around terrain generation, watersheds,
@@ -211,6 +151,7 @@ function generateElevations(world: World): void {
     world.find(0, full).elevation = Math.random() * 100;
     world.find(full, full).elevation = Math.random() * 100;
 
+    // todo: '20' represents altitude variance and should be configurable.
     divide(full, 20);
 }
 
@@ -297,59 +238,16 @@ function smoothTerrain(world: World): void {
     console.log(`Cells smoothed: ${smoothed} / ${world.dim * world.dim} (${100 * smoothed / (world.dim * world.dim)}%)`);
 }
 
-function sunshine(world: World): void {
-    world.grid.forEach(function (cell) {
-        let sun = new RenewablePopulation(cell, {
-            name: 'Brittney of the North',
-            type: 'energy',
-            population: 10,
-            stats: {
-                mass: 10,
-            }
-        });
-    });
-}
-
 export class Cell implements Location {
     x: number;
     y: number;
     terrain: number = -1;
     elevation: number = 0;
     water: boolean = false;
-    populations: Array<Population> = [];
     world: World;
 
     constructor(x: number, y: number) {
         this.x = x;
         this.y = y;
-    }
-
-    /**
-     * Add a new population to the cell. Automatically invokes the same function on the world that
-     * the cell is a part of as well. Note that a population can only be present on a single cell
-     * at a time so this will generate an exception if the population already has a home.
-     * 
-     * @param {Population} the population to add
-     * @throws {Exception} if the population already exists in a cell
-     */
-    spawn(pop: Population): void {
-        if (pop.home !== null) throw Error(`Population ${pop.name} already has a home.`);
-
-        pop.home = this;
-        this.populations.push(pop);
-        this.world.populations.push(pop);
-    }
-
-    /**
-     * Remove the specified population from the cell. Automatically invokes the same function on
-     * the world that the cell is a part of as well.
-     * 
-     * @param {Population} the population to remove
-     */
-    extinguish(pop: Population): void {
-        pop.home = null;
-
-        this.populations = this.populations.filter(p => p.id !== pop.id);
-        this.world.extinguish(pop);
     }
 }

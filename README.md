@@ -1,8 +1,8 @@
 # Glimpse
 ## Procedural world generation
 
-[![Build Status](https://travis-ci.org/anyweez/glimpse.svg?branch=tests)](https://travis-ci.org/anyweez/glimpse)
-[![Coverage Status](https://coveralls.io/repos/github/anyweez/glimpse/badge.svg?branch=tests)](https://coveralls.io/github/anyweez/glimpse?branch=tests)
+[![Build Status](https://travis-ci.org/anyweez/glimpse.svg?branch=master)](https://travis-ci.org/anyweez/glimpse)
+[![Coverage Status](https://coveralls.io/repos/github/anyweez/glimpse/badge.svg?branch=master)](https://coveralls.io/github/anyweez/glimpse?branch=master)
 
 I've wanted to generate my own virtual worlds for a long time but haven't had much background on how to pursue it. This project is still young
 but is currently tackling terrain generation along with some camera work to provide beautiful fly-by's over my grid world. I'm intentionally not
