@@ -40,11 +40,20 @@ var world_1 = require("./world");
 var progress_1 = require("./progress");
 var file_format_1 = require("./file_format");
 var MAP_DETAIL = 8;
+var random_name = function (length) {
+    var chars = 'abcdefghijklmnopqrstuvwxyz';
+    var selected = [];
+    for (var i = 0; i < length; i++) {
+        var idx = Math.round(Math.random() * chars.length);
+        selected.push(chars[idx]);
+    }
+    return selected.join('');
+};
 /**
- * Generate the world.
+ * Generate the world and save to a randomly generated filename in the 'worlds/' subdirectory.
  */
 var generate = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var track, game;
+    var track, game, filename;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -63,7 +72,9 @@ var generate = function () { return __awaiter(void 0, void 0, void 0, function (
                     })];
             case 1:
                 _a.sent();
-                return [4 /*yield*/, file_format_1.default.write('world.json', game)];
+                filename = "worlds/" + random_name(10) + ".json";
+                console.log("Saving world to '" + filename + "'...");
+                return [4 /*yield*/, file_format_1.default.write(filename, game)];
             case 2:
                 _a.sent();
                 return [2 /*return*/];

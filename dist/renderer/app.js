@@ -101,14 +101,15 @@ var render_elevation = function (cell) {
     };
 };
 var run = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var world;
+    var world, filename_base;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0: return [4 /*yield*/, file_format_1.default.read(filename)];
             case 1:
                 world = _a.sent();
-                render(world, render_terrain, 'world_terrain.png');
-                render(world, render_elevation, 'world_elevation.png');
+                filename_base = filename.split('.')[0];
+                render(world, render_terrain, filename_base + "_terrain.png");
+                render(world, render_elevation, filename_base + "_elevation.png");
                 return [2 /*return*/];
         }
     });

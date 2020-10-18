@@ -84,9 +84,10 @@ const render_elevation = (cell : Cell) : Color => {
 
 const run = async () => {
     const world = await file_format.read(filename);
+    const filename_base = filename.split('.')[0];
 
-    render(world, render_terrain, 'world_terrain.png');
-    render(world, render_elevation, 'world_elevation.png');
+    render(world, render_terrain, `${filename_base}_terrain.png`);
+    render(world, render_elevation, `${filename_base}_elevation.png`);
 }
 
 run();
