@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.colorize = exports.available = exports.Terrain = void 0;
 exports.Terrain = {
     ANY: 1,
     WATER: 2,

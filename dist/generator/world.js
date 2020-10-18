@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Cell = exports.World = void 0;
 var terrain_1 = require("./terrain");
 // How much elevation should randomly vary from its surroundings.
 var ELEVATION_NOISE_LEVEL = 7;
