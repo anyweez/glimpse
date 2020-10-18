@@ -1,7 +1,7 @@
 import { fs } from 'mz';
 import { PNG } from 'pngjs';
 import file_format from '../generator/file_format';
-import { Cell } from '../generator/world';
+import { World, Cell } from '../generator/world';
 import { Terrain } from '../generator/terrain';
 
 const filename = process.argv[2];
@@ -29,9 +29,7 @@ const color = (name: string) : Color => {
     return { r: 255, g: 0, b: 0, a: 0 }
 }
 
-const run = async () => {
-    const world = await file_format.read(filename);
-
+const render = (world : World, fn : (cell : Cell) => Color, filename : string) => {
     const img = new PNG({
         width: world.dim * CELL_DIMENSION_IN_PIXELS,
         height: world.dim * CELL_DIMENSION_IN_PIXELS,
@@ -47,16 +45,9 @@ const run = async () => {
             const proj_x = Math.floor(x / CELL_DIMENSION_IN_PIXELS);
             const proj_y = Math.floor(y / CELL_DIMENSION_IN_PIXELS);
 
-            const { terrain, elevation } = world.find(proj_x, proj_y) as Cell;
-
-            // Determine color for each cell based on properties of the cell.
-            const c = (terrain === Terrain.WATER && elevation < 5) ? color('DEEP_WATER') :
-                (terrain === Terrain.WATER && elevation < 15) ? color('WATER') :
-                (terrain === Terrain.WATER) ? color('SHALLOW_WATER') :
-                (terrain === Terrain.GRASS) ? color('GRASS') :
-                (terrain === Terrain.SAND) ? color('SAND') :
-                (terrain === Terrain.ROCK) ? color('ROCK') :
-                { r: 255, g: 0, b: 0, a: 0 }; // bright red, error color
+            const cell = world.find(proj_x, proj_y) as Cell;
+            // Call user-provided function to get the color for the specified cell.
+            const c = fn(cell);
 
             img.data[idx] = c.r;
             img.data[idx + 1] = c.g;
@@ -65,7 +56,37 @@ const run = async () => {
         }
     }
 
-    img.pack().pipe(fs.createWriteStream('world.png'));
+    img.pack().pipe(fs.createWriteStream(filename));
+}
+
+const render_terrain = (cell : Cell) : Color => {
+    const { terrain, elevation } = cell;
+
+    const c = (terrain === Terrain.WATER && elevation < 5) ? color('DEEP_WATER') :
+        (terrain === Terrain.WATER && elevation < 15) ? color('WATER') :
+        (terrain === Terrain.WATER) ? color('SHALLOW_WATER') :
+        (terrain === Terrain.GRASS) ? color('GRASS') :
+        (terrain === Terrain.SAND) ? color('SAND') :
+        (terrain === Terrain.ROCK) ? color('ROCK') :
+        { r: 255, g: 0, b: 0, a: 0 }; // bright red, error color
+
+    return c;
+}
+
+const render_elevation = (cell : Cell) : Color => {
+    return {
+        r: cell.elevation * 2.55,
+        g: cell.elevation * 2.55,
+        b: cell.elevation * 2.55,
+        a: 255,
+    };
+}
+
+const run = async () => {
+    const world = await file_format.read(filename);
+
+    render(world, render_terrain, 'world_terrain.png');
+    render(world, render_elevation, 'world_elevation.png');
 }
 
 run();

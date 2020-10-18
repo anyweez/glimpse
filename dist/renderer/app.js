@@ -57,43 +57,58 @@ var color = function (name) {
         return { r: 166, g: 162, b: 162, a: 0 };
     return { r: 255, g: 0, b: 0, a: 0 };
 };
+var render = function (world, fn, filename) {
+    var img = new pngjs_1.PNG({
+        width: world.dim * CELL_DIMENSION_IN_PIXELS,
+        height: world.dim * CELL_DIMENSION_IN_PIXELS,
+        colorType: 6,
+    });
+    // Iterate over all PIXELS in the image. Cells in the World may be rendered in
+    // more than one pixel (defined via CELL_DIMENSION_IN_PIXELS).
+    for (var y = 0; y < img.height; y++) {
+        for (var x = 0; x < img.width; x++) {
+            var idx = (img.width * y + x) << 2; // 4 bytes per pixel
+            var proj_x = Math.floor(x / CELL_DIMENSION_IN_PIXELS);
+            var proj_y = Math.floor(y / CELL_DIMENSION_IN_PIXELS);
+            var cell = world.find(proj_x, proj_y);
+            // Call user-provided function to get the color for the specified cell.
+            var c = fn(cell);
+            img.data[idx] = c.r;
+            img.data[idx + 1] = c.g;
+            img.data[idx + 2] = c.b;
+            img.data[idx + 3] = 255;
+        }
+    }
+    img.pack().pipe(mz_1.fs.createWriteStream(filename));
+};
+var render_terrain = function (cell) {
+    var terrain = cell.terrain, elevation = cell.elevation;
+    var c = (terrain === terrain_1.Terrain.WATER && elevation < 5) ? color('DEEP_WATER') :
+        (terrain === terrain_1.Terrain.WATER && elevation < 15) ? color('WATER') :
+            (terrain === terrain_1.Terrain.WATER) ? color('SHALLOW_WATER') :
+                (terrain === terrain_1.Terrain.GRASS) ? color('GRASS') :
+                    (terrain === terrain_1.Terrain.SAND) ? color('SAND') :
+                        (terrain === terrain_1.Terrain.ROCK) ? color('ROCK') :
+                            { r: 255, g: 0, b: 0, a: 0 }; // bright red, error color
+    return c;
+};
+var render_elevation = function (cell) {
+    return {
+        r: cell.elevation * 2.55,
+        g: cell.elevation * 2.55,
+        b: cell.elevation * 2.55,
+        a: 255,
+    };
+};
 var run = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var world, img, y, x, idx, proj_x, proj_y, _a, terrain, elevation, c;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var world;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0: return [4 /*yield*/, file_format_1.default.read(filename)];
             case 1:
-                world = _b.sent();
-                img = new pngjs_1.PNG({
-                    width: world.dim * CELL_DIMENSION_IN_PIXELS,
-                    height: world.dim * CELL_DIMENSION_IN_PIXELS,
-                    colorType: 6,
-                });
-                // Iterate over all PIXELS in the image. Cells in the World may be rendered in
-                // more than one pixel (defined via CELL_DIMENSION_IN_PIXELS).
-                for (y = 0; y < img.height; y++) {
-                    for (x = 0; x < img.width; x++) {
-                        idx = (img.width * y + x) << 2;
-                        proj_x = Math.floor(x / CELL_DIMENSION_IN_PIXELS);
-                        proj_y = Math.floor(y / CELL_DIMENSION_IN_PIXELS);
-                        _a = world.find(proj_x, proj_y), terrain = _a.terrain, elevation = _a.elevation;
-                        c = (terrain === terrain_1.Terrain.WATER && elevation < 5) ? color('DEEP_WATER') :
-                            (terrain === terrain_1.Terrain.WATER && elevation < 15) ? color('WATER') :
-                                (terrain === terrain_1.Terrain.WATER) ? color('SHALLOW_WATER') :
-                                    (terrain === terrain_1.Terrain.GRASS) ? color('GRASS') :
-                                        (terrain === terrain_1.Terrain.SAND) ? color('SAND') :
-                                            (terrain === terrain_1.Terrain.ROCK) ? color('ROCK') :
-                                                { r: 255, g: 0, b: 0, a: 0 };
-                        if (world.dim * y + x === 260) {
-                            console.log("(" + x + ", " + y + ", dim=" + world.dim + ")");
-                        }
-                        img.data[idx] = c.r;
-                        img.data[idx + 1] = c.g;
-                        img.data[idx + 2] = c.b;
-                        img.data[idx + 3] = 255;
-                    }
-                }
-                img.pack().pipe(mz_1.fs.createWriteStream('world.png'));
+                world = _a.sent();
+                render(world, render_terrain, 'world_terrain.png');
+                render(world, render_elevation, 'world_elevation.png');
                 return [2 /*return*/];
         }
     });
