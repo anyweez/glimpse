@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -36,38 +36,76 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var mz_1 = require("mz");
 var world_1 = require("./world");
-var progress_1 = require("./progress");
-var file_format_1 = require("./file_format");
-var MAP_DETAIL = 8;
-/**
- * Generate the world.
- */
-var generate = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var track, game;
+var Worldfile = /** @class */ (function () {
+    function Worldfile() {
+        this.meta = new WorldMeta();
+        this.cells = new Array();
+    }
+    return Worldfile;
+}());
+var WorldMeta = /** @class */ (function () {
+    function WorldMeta() {
+    }
+    return WorldMeta;
+}());
+var WorldfileCell = /** @class */ (function () {
+    function WorldfileCell() {
+    }
+    return WorldfileCell;
+}());
+var read = function (filename) { return __awaiter(void 0, void 0, void 0, function () {
+    var content, w;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0:
-                track = progress_1.default();
-                track.start([
-                    'Generating elevations',
-                    'Filling aquifers',
-                    'Rainfall',
-                    'Evaporation',
-                    'Converting to terrain',
-                    'Smoothing terrain',
-                ]);
-                game = new world_1.World(Math.pow(2, MAP_DETAIL) + 1);
-                return [4 /*yield*/, game.init({
-                        update: track.next.bind(progress_1.default)
-                    })];
+            case 0: return [4 /*yield*/, mz_1.fs.readFile(filename)
+                    .then(function (res) { return JSON.parse(res.toString()); })];
             case 1:
-                _a.sent();
-                return [4 /*yield*/, file_format_1.default.write('world.json', game)];
-            case 2:
-                _a.sent();
-                return [2 /*return*/];
+                content = _a.sent();
+                w = new world_1.World(content.meta.width);
+                // Copy content from each cell into the world object.
+                content.cells.forEach(function (cell) {
+                    var wcell = w.find(cell.x, cell.y);
+                    wcell.elevation = cell.elevation;
+                    wcell.terrain = cell.terrain;
+                });
+                return [2 /*return*/, Promise.resolve(w)];
         }
     });
 }); };
-generate();
+/**
+ * Write a worldfile to `filename` based on the specified `world`.
+ *
+ * @param filename
+ * @param world
+ */
+var write = function (filename, world) { return __awaiter(void 0, void 0, void 0, function () {
+    var wf, y, x, wfc, cell, wfstr;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                wf = new Worldfile();
+                wf.meta.height = world.dim;
+                wf.meta.width = world.dim;
+                for (y = 0; y < world.dim; y++) {
+                    for (x = 0; x < world.dim; x++) {
+                        wfc = new WorldfileCell();
+                        cell = world.find(x, y);
+                        wfc.elevation = cell.elevation;
+                        wfc.x = cell.x;
+                        wfc.y = cell.y;
+                        wfc.terrain = cell.terrain;
+                        wf.cells.push(wfc);
+                    }
+                }
+                wfstr = JSON.stringify(wf);
+                return [4 /*yield*/, mz_1.fs.writeFile(filename, wfstr)];
+            case 1: return [2 /*return*/, _a.sent()];
+        }
+    });
+}); };
+exports.default = {
+    read: read,
+    write: write
+};
