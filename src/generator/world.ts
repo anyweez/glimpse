@@ -151,6 +151,7 @@ function generateElevations(world: World): void {
     world.find(0, full).elevation = Math.random() * 100;
     world.find(full, full).elevation = Math.random() * 100;
 
+    // todo: '20' represents altitude variance and should be configurable.
     divide(full, 20);
 }
 

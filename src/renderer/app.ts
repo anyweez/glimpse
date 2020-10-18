@@ -15,20 +15,6 @@ interface Color {
     a: number
 }
 
-const color = (name: string) : Color => {
-    if (name === 'SHALLOW_WATER') return { r: 112, g: 162, b: 194, a: 0 };
-    if (name === 'WATER') return { r: 69, g: 123, b: 157, a: 0 };
-    if (name === 'DEEP_WATER') return { r: 30, g: 79, b: 110, a: 0 };
-
-    if (name === 'GRASS') return { r: 119, g: 207, b: 60, a: 0 };
-
-    if (name === 'SAND') return { r: 248, g: 252, b: 111, a: 0 };
-
-    if (name === 'ROCK') return { r: 166, g: 162, b: 162, a: 0 };
-
-    return { r: 255, g: 0, b: 0, a: 0 }
-}
-
 const render = (world : World, fn : (cell : Cell) => Color, filename : string) => {
     const img = new PNG({
         width: world.dim * CELL_DIMENSION_IN_PIXELS,
@@ -60,20 +46,77 @@ const render = (world : World, fn : (cell : Cell) => Color, filename : string) =
 }
 
 const render_terrain = (cell : Cell) : Color => {
+    const TerrainColors = {
+        'WATER_SHALLOW':    { r: 112, g: 162, b: 194, a: 0 },
+        'WATER':            { r: 69, g: 123, b: 157, a: 0 },
+        'WATER_DEEP':       { r: 30, g: 79, b: 110, a: 0 },
+
+        'GRASS_LOWLAND':    { r: 119, g: 207, b: 60, a: 0 },
+        'GRASS_HILLS':      { r: 97, g: 179, b: 41, a: 0 },
+        'GRASS_MOUNTAIN':   { r: 67, g: 138, b: 19, a: 0 },
+
+        'SAND':             { r: 248, g: 252, b: 111, a: 0 },
+
+        'MOUNTAIN':         { r: 166, g: 162, b: 162, a: 0 },
+        'MOUNTAIN_SNOWCAP': { r: 232, g: 232, b: 232, a: 0 },
+    };
+
     const { terrain, elevation } = cell;
 
-    const c = (terrain === Terrain.WATER && elevation < 5) ? color('DEEP_WATER') :
-        (terrain === Terrain.WATER && elevation < 15) ? color('WATER') :
-        (terrain === Terrain.WATER) ? color('SHALLOW_WATER') :
-        (terrain === Terrain.GRASS) ? color('GRASS') :
-        (terrain === Terrain.SAND) ? color('SAND') :
-        (terrain === Terrain.ROCK) ? color('ROCK') :
-        { r: 255, g: 0, b: 0, a: 0 }; // bright red, error color
+    // Water conditions
+    if (terrain === Terrain.WATER && elevation < 5) {
+        return TerrainColors['WATER_DEEP'];
+    }
 
-    return c;
+    if (terrain === Terrain.WATER && elevation < 15) {
+        return TerrainColors['WATER'];
+    }
+
+    if (terrain === Terrain.WATER) {
+        return TerrainColors['WATER_SHALLOW'];
+    }
+
+    // Grass conditions
+    if (terrain === Terrain.GRASS && elevation < 30) {
+        const rand = Math.random();
+
+        return (rand < .1) ? 
+            TerrainColors['GRASS_HILLS'] :  // 20% hill grass
+            TerrainColors['GRASS_LOWLAND']; // 80% lowland grass
+    }
+
+    if (terrain === Terrain.GRASS && elevation < 70) {
+        const rand = Math.random();
+
+        return (rand < .9) ? 
+            TerrainColors['GRASS_HILLS'] :  // 80% hill grass
+            TerrainColors['GRASS_LOWLAND']; // 20% lowland grass
+    }
+
+    if (terrain === Terrain.GRASS) {
+        return TerrainColors['GRASS_MOUNTAIN'];
+    }
+
+    // Sand conditions
+    if (terrain === Terrain.SAND) {
+        return TerrainColors['SAND'];
+    }
+
+    // Rock conditions
+    if (terrain === Terrain.ROCK && elevation < 98) {
+        return TerrainColors['MOUNTAIN'];
+    }
+
+    if (terrain === Terrain.ROCK) {
+        return TerrainColors['MOUNTAIN_SNOWCAP'];
+    }
+
+    // If all else fails, return full red. This should never happen.
+    return { r: 255, g: 0, b: 0, a: 0 };
 }
 
 const render_elevation = (cell : Cell) : Color => {
+    // Max elevation is 100, so multiply by 2.55 to get to a max of 255.
     return {
         r: cell.elevation * 2.55,
         g: cell.elevation * 2.55,

@@ -123,6 +123,7 @@ function generateElevations(world) {
     world.find(full, 0).elevation = Math.random() * 100;
     world.find(0, full).elevation = Math.random() * 100;
     world.find(full, full).elevation = Math.random() * 100;
+    // todo: '20' represents altitude variance and should be configurable.
     divide(full, 20);
 }
 function rainfall(world) {
