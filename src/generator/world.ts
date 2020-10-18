@@ -100,8 +100,8 @@ export class World {
 
         if (cell.x - 1 >= 0) neighbors.push(this.find(cell.x - 1, cell.y));
         if (cell.y - 1 >= 0) neighbors.push(this.find(cell.x, cell.y - 1));
-        if (cell.x + 1 < this.dim) neighbors.push(this.find(cell.x + 1, cell.y));
-        if (cell.y + 1 < this.dim) neighbors.push(this.find(cell.x, cell.y + 1));
+        if (cell.x + 1 < this.meta.dim) neighbors.push(this.find(cell.x + 1, cell.y));
+        if (cell.y + 1 < this.meta.dim) neighbors.push(this.find(cell.x, cell.y + 1));
 
         return neighbors;
     }

@@ -34,31 +34,26 @@ describe('World', function () {
      * finishes running.
      */
     it('should generate an nxn grid', function () {
-        let small = new World(dims.small);
-        let medium = new World(dims.medium);
-        let large = new World(dims.large);
+        let small = new World({ dim: dims.small });
+        let medium = new World({ dim: dims.medium });
+        let large = new World({ dim: dims.large });
 
-        expect(small.dim).to.be.equal(dims.small);
+        expect(small.meta.dim).to.be.equal(dims.small);
         expect(small.grid.length).to.be.equal(dims.small * dims.small);
 
-        expect(medium.dim).to.be.equal(dims.medium);
+        expect(medium.meta.dim).to.be.equal(dims.medium);
         expect(medium.grid.length).to.be.equal(dims.medium * dims.medium);
 
-        expect(large.dim).to.be.equal(dims.large);
+        expect(large.meta.dim).to.be.equal(dims.large);
         expect(large.grid.length).to.be.equal(dims.large * dims.large);
     });
 
     it('should be able to find existing neighbors', function () {
-        const world = new World(dims.medium);
+        const world = new World({ dim: dims.medium });
 
-        for (let y = 1; y < world.dim - 1; y++) {
-            for (let x = 1; x < world.dim - 1; x++) {
-                let target = {
-                    x: x,
-                    y: y,
-                };
-
-                const neighbors = world.neighbors(target);
+        for (let y = 1; y < world.meta.dim - 1; y++) {
+            for (let x = 1; x < world.meta.dim - 1; x++) {
+                const neighbors = world.neighbors({ x, y });
 
                 expect(neighbors).to.have.length(4);
             }
@@ -66,22 +61,18 @@ describe('World', function () {
     });
 
     it('should return the right neighbor count edges', function () {
-        let world = new World(dims.medium);
+        let world = new World({ dim: dims.medium });
 
-        for (let y = 0; y < world.dim; y++) {
-            for (let x = 0; x < world.dim; x++) {
-                let neighbors = world.neighbors({
-                    x: x,
-                    y: y,
-                    elevation: 1.0,
-                });
+        for (let y = 0; y < world.meta.dim; y++) {
+            for (let x = 0; x < world.meta.dim; x++) {
+                let neighbors = world.neighbors({ x, y });
 
                 let expected = 4;
 
                 if (x === 0) expected--;
-                if (x === world.dim - 1) expected--;
+                if (x === world.meta.dim - 1) expected--;
                 if (y === 0) expected--;
-                if (y === world.dim - 1) expected--;
+                if (y === world.meta.dim - 1) expected--;
 
                 expect(neighbors).to.have.length(expected);
             }
@@ -89,8 +80,10 @@ describe('World', function () {
     });
 
     it('should have terrain assigned to every cell', function (done) {
-        let world = new World(dims.small);
+        let world = new World({ dim: dims.small });
+
         output.disable();
+
         world.init({
             update: function () { },
         }).then(function () {

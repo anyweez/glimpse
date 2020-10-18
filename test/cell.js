@@ -27,7 +27,7 @@ describe('Cell', function () {
     let world = null;
     beforeEach(function () {
         output.disable();
-        world = new World(WORLD_DIM)
+        world = new World({ dim: WORLD_DIM })
 
         return world.init({
             update: function () { },
@@ -41,9 +41,9 @@ describe('Cell', function () {
             let cell = world.grid[i];
 
             expect(cell.x).to.be.a.number;
-            expect(cell.x).to.be.lessThan(world.dim);
+            expect(cell.x).to.be.lessThan(world.meta.dim);
             expect(cell.y).to.be.a.number;
-            expect(cell.y).to.be.lessThan(world.dim);
+            expect(cell.y).to.be.lessThan(world.meta.dim);
 
             expect(Object.values(Terrain)).to.contain(cell.terrain);
         }
