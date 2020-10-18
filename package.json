@@ -5,7 +5,7 @@
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && mocha test && nyc report --reporter=text",
+    "test": "npm run build && nyc mocha test",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "gen": "npm run build && node dist/generator/app.js"
   },
