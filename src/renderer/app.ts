@@ -17,8 +17,8 @@ interface Color {
 
 const render = (world : World, fn : (cell : Cell) => Color, filename : string) => {
     const img = new PNG({
-        width: world.dim * CELL_DIMENSION_IN_PIXELS,
-        height: world.dim * CELL_DIMENSION_IN_PIXELS,
+        width: world.meta.dim * CELL_DIMENSION_IN_PIXELS,
+        height: world.meta.dim * CELL_DIMENSION_IN_PIXELS,
         colorType: 6, // RGBA
     });
 

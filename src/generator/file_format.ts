@@ -27,7 +27,9 @@ const read = async (filename : string) : Promise<World> => {
     const content = await fs.readFile(filename)
         .then((res : Buffer) => JSON.parse( res.toString() ));
 
-    const w = new World(content.meta.width);
+    const w = new World({
+        dim: content.meta.width,
+    });
 
     // Copy content from each cell into the world object.
     content.cells.forEach((cell : WorldfileCell) => {
@@ -49,16 +51,16 @@ const read = async (filename : string) : Promise<World> => {
 const write = async (filename : string, world : World) => {
     const wf = new Worldfile();
 
-    wf.meta.height = world.dim;
-    wf.meta.width = world.dim;
+    wf.meta.height = world.meta.dim;
+    wf.meta.width = world.meta.dim;
 
-    for (let y = 0; y < world.dim; y++) {
-        for (let x = 0; x < world.dim; x++) {
+    for (let y = 0; y < world.meta.dim; y++) {
+        for (let x = 0; x < world.meta.dim; x++) {
             const wfc = new WorldfileCell();
 
             const cell = world.find(x, y);
 
-            wfc.elevation = cell.elevation;
+            wfc.elevation = Math.round(cell.elevation * 1000) / 1000;
             wfc.x = cell.x;
             wfc.y = cell.y;
             wfc.terrain = (cell as Cell).terrain;

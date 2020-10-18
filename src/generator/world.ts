@@ -1,9 +1,5 @@
 import { Terrain, available } from './terrain';
 
-// How much elevation should randomly vary from its surroundings.
-const ELEVATION_NOISE_LEVEL = 7;
-const AQUIFER_DEPTH = 35;
-
 /**
  * Represents a Cell or Cell-like object that marks a point in the world
  */
@@ -13,18 +9,37 @@ interface Location {
     elevation: number;
 }
 
+export interface WorldMeta {
+    dim?: number;
+    // The depth of the aquifer in the world; anything beneath this depth becomes a water tile.
+    aquiferDepth?: number;
+    altitudeVariance?: number;
+}
+
 export class World {
     dim: number;
     grid: Array<Cell> = [];
-    // The depth of the aquifer in the world.
-    // Anything beneath this depth becomes a water tile.
-    aquiferDepth: number = AQUIFER_DEPTH;
+    meta: WorldMeta;
+    // aquiferDepth: number = AQUIFER_DEPTH;
 
-    constructor(dim: number) {
-        this.dim = dim;
+    constructor(meta : WorldMeta) {
+        this.meta = meta;
 
-        for (let y = 0; y < dim; y++) {
-            for (let x = 0; x < dim; x++) {
+        if (this.meta.altitudeVariance === undefined) {
+            this.meta.altitudeVariance = 20.0;
+        }
+
+        if (this.meta.dim === undefined) {
+            this.meta.dim = 1025; // 2^10+1
+        }
+
+        if (this.meta.aquiferDepth === undefined) {
+            this.meta.aquiferDepth = 35;
+        }
+
+        // Generate cells for a world of size `meta.dim`
+        for (let y = 0; y < meta.dim; y++) {
+            for (let x = 0; x < meta.dim; x++) {
                 let cell = new Cell(x, y);
                 cell.world = this;
 
@@ -64,19 +79,19 @@ export class World {
     find(x: number, y: number): Location {
         // Inherit elevation (and potentially other properties, if needed) from out-of-bounds
         // cells. Coordinates (even if out of bounds) remain intact.
-        if (x < 0 || x >= this.dim) {
-            let realCell = (x < 0) ? this.find(this.dim - x, y) : this.find(x - this.dim, y);
+        if (x < 0 || x >= this.meta.dim) {
+            let realCell = (x < 0) ? this.find(this.meta.dim - x, y) : this.find(x - this.meta.dim, y);
 
             return { x: x, y: y, elevation: realCell.elevation };
         }
 
-        if (y < 0 || y >= this.dim) {
-            let realCell = (y < 0) ? this.find(x, this.dim - y) : this.find(x, y - this.dim);
+        if (y < 0 || y >= this.meta.dim) {
+            let realCell = (y < 0) ? this.find(x, this.meta.dim - y) : this.find(x, y - this.meta.dim);
 
             return { x: x, y: y, elevation: realCell.elevation };
         }
 
-        return this.grid[y * this.dim + x];
+        return this.grid[y * this.meta.dim + x];
     }
 
     // TODO: ambiguity issue between Location and Cell
@@ -101,7 +116,7 @@ export class World {
 // New version greatly influenced / copied from this article:
 //   http://www.playfuljs.com/realistic-terrain-in-130-lines/
 function generateElevations(world: World): void {
-    let full = world.dim - 1;
+    let full = world.meta.dim - 1;
 
     function divide(size: number, variance: number): void {
         let half = size / 2;
@@ -146,13 +161,13 @@ function generateElevations(world: World): void {
         world.find(x, y).elevation = avg + (Math.random() - 0.5) * variance;
     }
 
+    // Set initial elevations randomly in [0, 100]
     world.find(0, 0).elevation = Math.random() * 100;
     world.find(full, 0).elevation = Math.random() * 100;
     world.find(0, full).elevation = Math.random() * 100;
     world.find(full, full).elevation = Math.random() * 100;
 
-    // todo: '20' represents altitude variance and should be configurable.
-    divide(full, 20);
+    divide(full, world.meta.altitudeVariance);
 }
 
 function rainfall(world: World) {
@@ -179,7 +194,7 @@ function rainfall(world: World) {
 
 function aquifer(world: World) {
     world.grid.forEach(cell => {
-        if (cell.elevation < world.aquiferDepth) cell.water = true;
+        if (cell.elevation < world.meta.aquiferDepth) cell.water = true;
     });
 };
 
@@ -218,10 +233,8 @@ function terrainify(world: World): void {
 }
 
 function smoothTerrain(world: World): void {
-    let smoothed = 0;
-
     world.grid.forEach(cell => {
-        let terrains = new Set(world.neighbors(cell).map(c => c.terrain));
+        let terrains = new Set( world.neighbors(cell).map(c => c.terrain) );
 
         // If there's only one type of terrain around here, inherit it.
         if (terrains.size === 1) {
@@ -229,13 +242,11 @@ function smoothTerrain(world: World): void {
 
             if (cell.terrain !== commonTerrain) {
                 cell.terrain = commonTerrain;
+
                 if (cell.terrain === Terrain.WATER) cell.water = true;
-                smoothed += 1;
             }
         }
     });
-
-    console.log(`Cells smoothed: ${smoothed} / ${world.dim * world.dim} (${100 * smoothed / (world.dim * world.dim)}%)`);
 }
 
 export class Cell implements Location {

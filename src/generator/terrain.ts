@@ -22,7 +22,7 @@ export const available: Array<any> = [
         label: Terrain.SAND,
         func: function (cell: Cell, world: World): boolean {
             let valid = world.neighbors(cell).filter(cell => cell.water || cell.terrain === 'sand').length > 0;
-            return valid && cell.elevation - world.aquiferDepth < 10;
+            return valid && cell.elevation - world.meta.aquiferDepth < 10;
         },
         color: function (cell: Cell) {
             return { r: 248, g: 252, b: 111, a: 0 };

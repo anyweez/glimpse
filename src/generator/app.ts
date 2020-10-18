@@ -1,10 +1,13 @@
 'use strict'
 
+import * as ini from 'ini';
+import { fs } from 'mz';
+
 import { World } from './world';
 import progress from './progress';
 import file_format from './file_format';
 
-const MAP_DETAIL: number = 8;
+const MAP_DIMENSION: number = 10;
 
 const random_name = (length : number) => {
     const chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -23,8 +26,24 @@ const random_name = (length : number) => {
  * Generate the world and save to a randomly generated filename in the 'worlds/' subdirectory.
  */
 const generate = async () => {
-    let track = progress();
+    const config = ini.parse( fs.readFileSync('world.ini', 'utf-8') );
 
+    let track = progress();
+    
+    const game = new World({
+        dim:                !isNaN( parseInt(config.meta.world_size, 10) )
+                                ? Math.pow(2, parseInt(config.meta.world_size)) + 1 
+                                : Math.pow(2, MAP_DIMENSION) + 1,
+        altitudeVariance:   parseInt(config.meta.altitude_variance) || 20.0,
+        aquiferDepth:       parseInt(config.meta.aquifer_depth) || 35,
+    });
+
+    console.log(`Generating world based on properties:`);
+    console.log(game.meta);
+
+    console.log()
+    console.log()
+    
     track.start([
         'Generating elevations',
         'Filling aquifers',
@@ -33,8 +52,6 @@ const generate = async () => {
         'Converting to terrain',
         'Smoothing terrain',
     ]);
-    
-    const game = new World(Math.pow(2, MAP_DETAIL) + 1);
     
     await game.init({
         update: track.next.bind(progress)

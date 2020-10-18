@@ -18,7 +18,7 @@ export default function() {
                 }
                 // If more steps remain, update the user on progress and continue.
                 else {
-                    console.log(`[${current} of ${states.length}] ${states[current]}`);
+                    console.log(`[${current + 1} of ${states.length}] ${states[current]}`);
                 }
 
                 setTimeout(resolve, 0);
