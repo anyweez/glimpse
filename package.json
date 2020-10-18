@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && mocha test",
-    "coverage": "nyc npm run test | ./node_modules/coveralls/bin/coveralls.js",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
     "gen": "npm run build && node dist/generator/app.js"
   },
   "repository": {
@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/anyweez/glimpse#readme",
   "devDependencies": {
-    "coveralls": "^2.11.11",
+    "coveralls": "^2.13.3",
     "expect.js": "^0.3.1",
     "mocha": "^8.2.0",
     "nyc": "^15.1.0",
