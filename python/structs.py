@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
+import enum, random
 
 from scipy.spatial import voronoi_plot_2d
 
 class Cell(object):
+    Type = enum.Enum('CellType', 'NONE WATER LAND')
+
     def __init__(self, region_idx, location):
         self.region_idx = region_idx
         self.location = location
@@ -10,6 +13,8 @@ class Cell(object):
 
         # Does this cell exist on the border of the world?
         self.is_boundary = False
+
+        self.type = Cell.Type.NONE
 
     def add_edge(self, cell):
         # Can't add existing neighbors, and can't add self
@@ -23,6 +28,8 @@ class World(object):
 
         self._form_cells()
         self._label_boundary()
+        self._add_water()
+        self._terrainify()
 
     '''
     Generate a series of world cells based on the specified Voronoi diagram. A directed
@@ -65,6 +72,26 @@ class World(object):
                     if y > 1.0 or y < 0.0:
                         cell.is_boundary = True
 
+    def _add_water(self):
+        for cell in self.cells:
+            if cell.is_boundary:
+                cell.type = Cell.Type.WATER
+
+                # Traverse the cell graph twice randomly and turn each cell into
+                # water. Two anecdotally gives decent results when PointCount = 250,
+                # but the number should probably be a function of the number of cells.
+                neighbor = cell
+                for _ in range(2):
+                    neighbor = random.choice(neighbor.neighbor_to)
+                    neighbor.type = Cell.Type.WATER
+
+                    neighbor = random.choice(neighbor.neighbor_to)
+
+    def _terrainify(self):
+        for cell in self.cells:
+            if not cell.type == Cell.Type.WATER:
+                cell.type = Cell.Type.LAND
+
     def get_cell_by_id(self, cell_id):
         for cell in self.cells:
             if cell.region_idx == cell_id:
@@ -92,7 +119,7 @@ class World(object):
         plt.fill(x, y, color)
 
     def render(self, cell_labels=False, color_boundaries=False):
-        voronoi_plot_2d(self.vor, show_vertices=False, show_points=False)
+        voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
         axes = plt.gca()
 
         axes.set_xlim([0, 1])
@@ -104,9 +131,9 @@ class World(object):
 
         if color_boundaries:
             for cell in self.cells:
-                if cell.is_boundary:
+                if cell.type == Cell.Type.WATER:
                     self.paint_cell(cell.region_idx, '#0485d1')
-                else:
+                if cell.type == Cell.Type.LAND:
                     self.paint_cell(cell.region_idx, 'g')
 
 
