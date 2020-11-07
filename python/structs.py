@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import enum, random
+import enum, random, math
 
 from scipy.spatial import voronoi_plot_2d
 
@@ -28,7 +28,7 @@ class World(object):
 
         self._form_cells()
         self._label_boundary()
-        self._add_water()
+        self._add_ocean()
         self._terrainify()
 
     '''
@@ -72,7 +72,11 @@ class World(object):
                     if y > 1.0 or y < 0.0:
                         cell.is_boundary = True
 
-    def _add_water(self):
+    '''
+    All cells at the edge of the map are water. We then traverse the graph from each of the boundary cells
+    and mark cells along the path as water (% chance).
+    '''
+    def _add_ocean(self):
         for cell in self.cells:
             if cell.is_boundary:
                 cell.type = Cell.Type.WATER
@@ -81,11 +85,14 @@ class World(object):
                 # water. Two anecdotally gives decent results when PointCount = 250,
                 # but the number should probably be a function of the number of cells.
                 neighbor = cell
-                for _ in range(2):
-                    neighbor = random.choice(neighbor.neighbor_to)
-                    neighbor.type = Cell.Type.WATER
 
+                iterations = round( math.sqrt(math.sqrt(len(self.cells))) )
+
+                for _ in range(iterations):
                     neighbor = random.choice(neighbor.neighbor_to)
+
+                    if (random.random() < 0.8):
+                        neighbor.type = Cell.Type.WATER
 
     def _terrainify(self):
         for cell in self.cells:

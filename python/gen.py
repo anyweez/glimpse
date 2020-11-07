@@ -1,14 +1,12 @@
-import random, numpy
+import random, numpy, structs
 import matplotlib.pyplot as plt
-
-import structs
 
 from scipy.spatial import Voronoi, voronoi_plot_2d
 
 random.seed()
 
 # Configuration variables
-PointCount = 250
+PointCount = 480
 
 def point_cloud(n):
     return [(random.random(), random.random()) for _ in range(n)]
@@ -16,7 +14,7 @@ def point_cloud(n):
 points = numpy.array(point_cloud(PointCount))
 vor = None
 
-for i in range(15):
+for i in range(3):
     vor = Voronoi(points)
     new_points = numpy.zeros(points.shape)
 
