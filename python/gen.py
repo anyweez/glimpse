@@ -33,4 +33,4 @@ for i in range(3):
 world = structs.World(vor)
 
 ## Render
-world.render(cell_labels=False, color_boundaries=True)
+world.render(cell_labels=False, color_boundaries=True, cell_elevation=True)

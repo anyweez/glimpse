@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import enum, random, math
+import enum, random, math, colour
 
 from scipy.spatial import voronoi_plot_2d
 
@@ -15,6 +15,7 @@ class Cell(object):
         self.is_boundary = False
 
         self.type = Cell.Type.NONE
+        self.elevation = 0
 
     def add_edge(self, cell):
         # Can't add existing neighbors, and can't add self
@@ -30,6 +31,7 @@ class World(object):
         self._label_boundary()
         self._add_ocean()
         self._terrainify()
+        self._add_elevation()
 
     '''
     Generate a series of world cells based on the specified Voronoi diagram. A directed
@@ -99,6 +101,31 @@ class World(object):
             if not cell.type == Cell.Type.WATER:
                 cell.type = Cell.Type.LAND
 
+    def _add_elevation(self):
+        max_elevation = 0
+
+        for cell in self.cells:
+            cell.elevation = self.__distance_from_water(cell)
+
+            if cell.elevation > max_elevation:
+                max_elevation = cell.elevation
+
+        # for cell in self.cells:
+        #     cell.elevation = cell.elevation / max_elevation
+
+    def __distance_from_water(self, cell):
+        queue = [(cell, 0),]
+
+        while len(queue) > 0:
+            (cell, dist) = queue.pop(0)
+
+            if cell.type == Cell.Type.WATER:
+                return dist
+
+            for next_cell in cell.neighbor_to:
+                queue.append( (next_cell, dist + 1) ) 
+
+
     def get_cell_by_id(self, cell_id):
         for cell in self.cells:
             if cell.region_idx == cell_id:
@@ -125,7 +152,7 @@ class World(object):
         y = list( map(lambda p: p[1], region) )
         plt.fill(x, y, color)
 
-    def render(self, cell_labels=False, color_boundaries=False):
+    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False):
         voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
         axes = plt.gca()
 
@@ -143,6 +170,21 @@ class World(object):
                 if cell.type == Cell.Type.LAND:
                     self.paint_cell(cell.region_idx, 'g')
 
+        if cell_elevation:
+            color_sealevel = colour.Color('green')
+            color_peak = colour.Color('white')
+
+            num_colors = max(map(lambda c: c.elevation, self.cells))
+            gradient = list( color_sealevel.range_to(color_peak, num_colors) )
+
+            for color in gradient:
+                print(color.hex)
+
+            for cell in self.cells:
+                # if cell.type == Cell.Type.WATER:
+                #     self.paint_cell(cell.region_idx, '#0485d1')
+                if cell.type == Cell.Type.LAND:
+                    self.paint_cell(cell.region_idx, gradient[cell.elevation - 1].hex)
 
         plt.title('Voronoi polygons')
         plt.show()
