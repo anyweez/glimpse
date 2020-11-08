@@ -26,25 +26,33 @@ class Cell(object):
         self.plate_id = None
 
 class WorldRegion(object):
-    def __init__(self, cells, vor):
-        self.cellmap = {}
-        for cell in cells:
-            self.cellmap[cell.region_idx] = cell
-        
+    def __init__(self, cells, vor):        
         self.cells = cells
         self.vor = vor
 
         # 'Neighbor map': Map the idx of the cell in self.cells to the idx of all neighbors
         self.nmap = {}
 
+        self.cellmap = {}
+
+        for cell in cells:
+            self.cellmap[cell.region_idx] = cell
+            self.nmap[cell.region_idx] = set()
+
+        # Count the number of appearances of each vertex. Regions that contain the sole reference to
+        # a vertex are on the 'border' of the graph.
+        self.vertex_count = {}
+
         self._build_graph()
+        self._count_vertices()
 
     def _add_edge(self, src_idx, dest_idx):
-        if src_idx not in self.nmap:
-            self.nmap[src_idx] = set()
-
         self.nmap[src_idx].add(dest_idx)
 
+    '''
+    Build a graph connecting notes that share vertices. This graph is built when the WorldRegion
+    is initialized and only contains edges between cells included in the region.
+    '''
     def _build_graph(self):
         for source in self.cells:
             for dest in self.cells:
@@ -60,6 +68,21 @@ class WorldRegion(object):
                     if not source_region.isdisjoint(dest_region):
                         self._add_edge(source.region_idx, dest.region_idx)
                         self._add_edge(dest.region_idx, source.region_idx)
+
+    '''
+    Counts and caches the number of times each vertex is associated with a cell in the region.
+    If a vertex only appears once, then the cell the vertex is associated with is considered a 
+    'border' cell -- see WorldRegion.is_border() for more.
+    '''
+    def _count_vertices(self):
+        for cell in self.cells:
+            indeces = set( self.vor.regions[cell.region_idx] )
+
+            for idx in indeces:
+                if idx not in self.vertex_count:
+                    self.vertex_count[idx] = 0
+                
+                self.vertex_count[idx] += 1
 
     def neighbors(self, region_idx, dist=1):
         # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
@@ -78,12 +101,12 @@ class WorldRegion(object):
                     added.add(c)
 
             else:
-                next_round = []
+                next_round = set()
                 for parent in by_distance[curr_dist - 1]:
                     for cell in self.neighbors(parent.region_idx, dist=1):
-                        next_round.append(cell)
+                        next_round.add(cell)
 
-                next_round = list( set(next_round) )
+                next_round = list( next_round )
                 # De-duplicate and flatten a list of the neighbors of all cells
                 by_distance.append( [c for c in next_round if c not in added] )
 
@@ -91,6 +114,19 @@ class WorldRegion(object):
                     added.add(c)
 
         return by_distance[dist - 1]
+
+    '''
+    Check whether the specified region is on the 'border' of the region. A cell is on the border if
+    it contains a vertex that isn't shared by any other cell in the region.
+    '''
+    def is_border(self, region_idx):
+        region = self.vor.regions[region_idx]
+
+        for r in region:
+            if self.vertex_count[r] == 1:
+                return True
+        
+        return False
 
 '''
 Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
@@ -116,6 +152,7 @@ class World(object):
 
             self._add_ocean(region)
             self._terrainify(region)
+            self._add_elevation(region)
         # Run world generation functions on each plate independently.
 
         # self._add_ocean()
@@ -172,27 +209,10 @@ class World(object):
     graph is also calculated based on which cells are touching each other.
     '''
     def _form_cells(self):
-        # Create all cells
         for point_idx, region_idx in enumerate(self.vor.point_region):
             cell = Cell(region_idx, self.vor.points[point_idx])
 
             self.cells.append(cell)
-        
-        # Find neighbors; if cells share any vertices then they're neighbors
-        # for source in self.cells:
-        #     for dest in self.cells:
-        #         if source.region_idx != dest.region_idx:
-        #             source_region = set( self.vor.regions[source.region_idx] )
-        #             dest_region = set( self.vor.regions[dest.region_idx] )
-
-        #             if -1 in source_region:
-        #                 source_region.remove(-1)
-        #             if -1 in dest_region:
-        #                 dest_region.remove(-1)
-
-        #             if not source_region.isdisjoint(dest_region):
-        #                 source.add_edge(dest)
-        #                 dest.add_edge(source)
 
     '''
     A boundary cell is a cell that extends beyond the edge of the world.
@@ -218,7 +238,7 @@ class World(object):
     '''
     def _add_ocean(self, region):
         for cell in region.cells:
-            if cell.is_boundary:
+            if region.is_border(cell.region_idx):
                 cell.type = Cell.Type.WATER
 
                 # Traverse the cell graph twice randomly and turn each cell into
@@ -229,31 +249,33 @@ class World(object):
                 iterations = round( math.sqrt(math.sqrt(len(region.cells))) )
 
                 for _ in range(iterations):
-                    neighbor = random.choice(region.neighbors(neighbor.region_idx))
-
                     if (random.random() < 0.8):
-                        neighbor.type = Cell.Type.WATER
+                        avail = region.neighbors(neighbor.region_idx)
+
+                        if len(avail) > 0:
+                            neighbor = random.choice(avail)
+                            neighbor.type = Cell.Type.WATER
 
     def _terrainify(self, region):
         for cell in region.cells:
             if not cell.type == Cell.Type.WATER:
                 cell.type = Cell.Type.LAND
 
-    def _add_elevation(self):
+    def _add_elevation(self, region):
         max_elevation = 0
 
-        for cell in self.cells:
-            cell.elevation = self.__distance_from_water(cell)
+        for cell in region.cells:
+            cell.elevation = self.__distance_from_water(cell, region)
 
             if cell.elevation > max_elevation:
                 max_elevation = cell.elevation
 
         # A percentage of land cells should take on the height of a random
         # neighbor cell.
-        for cell in self.cells:
+        for cell in region.cells:
             if cell.type != Cell.Type.WATER and random.random() < 0.1:
                 # Get all land cells
-                eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, cell.neighbor_to) )
+                eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, region.neighbors(cell.region_idx)) )
 
                 if len(eligible_neighbors) > 0:
                     neighbor = random.choice(eligible_neighbors)
@@ -264,7 +286,7 @@ class World(object):
     as the lowest number of edges in the world graph that need to be traversed to 
     reach a water cell.
     '''
-    def __distance_from_water(self, cell):
+    def __distance_from_water(self, cell, region):
         queue = collections.deque()
         queue.append( (cell, 0) )
 
@@ -278,7 +300,7 @@ class World(object):
             if cell.type == Cell.Type.WATER:
                 return dist
 
-            for next_cell in cell.neighbor_to:
+            for next_cell in region.neighbors(cell.region_idx):
                 if next_cell.region_idx not in added:
                     queue.append( (next_cell, dist + 1) ) 
                     added.add( next_cell.region_idx )
