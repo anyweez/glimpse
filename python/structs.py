@@ -3,6 +3,9 @@ import enum, random, math, colour, collections, pprint
 
 from scipy.spatial import voronoi_plot_2d
 
+class InvalidCellError(Exception):
+    pass
+
 '''
 Cells represent sections of a World that have certain characteristics like terrain types
 and elevation. Cells are spatially defined by polygons, which are currently equivalent 
@@ -85,6 +88,9 @@ class WorldRegion(object):
                 self.vertex_count[idx] += 1
 
     def neighbors(self, region_idx, dist=1):
+        if region_idx not in self.cellmap:
+            raise InvalidCellError('Cell does not exist in region')
+
         # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
         # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
         if dist == 1:
@@ -120,6 +126,9 @@ class WorldRegion(object):
     it contains a vertex that isn't shared by any other cell in the region.
     '''
     def is_border(self, region_idx):
+        if region_idx not in self.cellmap:
+            raise InvalidCellError('Cell does not exist in region')
+
         region = self.vor.regions[region_idx]
 
         for r in region:
@@ -135,11 +144,12 @@ configuration variables needed to do so.
 '''
 class World(object):
     def __init__(self, vor):
-        self.cells = []
         self.vor = vor
+        self.cells = []
 
-        self._form_cells()
-        self._label_boundary()
+    def build(self):
+        self.cells = self._form_cells()
+        self._label_boundary(self.cells)
 
         # Establish tectonic plates. Once this is done we'll create a separate region for each.
         wr = WorldRegion(self.cells, self.vor)
@@ -209,16 +219,19 @@ class World(object):
     graph is also calculated based on which cells are touching each other.
     '''
     def _form_cells(self):
+        cells = []
         for point_idx, region_idx in enumerate(self.vor.point_region):
             cell = Cell(region_idx, self.vor.points[point_idx])
 
-            self.cells.append(cell)
+            cells.append(cell)
+
+        return cells
 
     '''
     A boundary cell is a cell that extends beyond the edge of the world.
     '''
-    def _label_boundary(self):
-        for cell in self.cells:
+    def _label_boundary(self, cells):
+        for cell in cells:
             region = self.vor.regions[cell.region_idx]
 
             if -1 in region:
