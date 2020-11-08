@@ -6,7 +6,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 random.seed()
 
 # Configuration variables
-PointCount = 480
+PointCount = 1024
 
 def point_cloud(n):
     return [(random.random(), random.random()) for _ in range(n)]

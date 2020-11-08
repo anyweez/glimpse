@@ -1,8 +1,13 @@
 import matplotlib.pyplot as plt
-import enum, random, math, colour
+import enum, random, math, colour, collections
 
 from scipy.spatial import voronoi_plot_2d
 
+'''
+Cells represent sections of a World that have certain characteristics like terrain types
+and elevation. Cells are spatially defined by polygons, which are currently equivalent 
+to regions of a Voronoi diagram.
+'''
 class Cell(object):
     Type = enum.Enum('CellType', 'NONE WATER LAND')
 
@@ -22,6 +27,11 @@ class Cell(object):
         if cell not in self.neighbor_to and cell.region_idx is not self.region_idx:
             self.neighbor_to.append(cell)
 
+'''
+Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
+and position of each. Worlds also include much of the logic for world generation and any 
+configuration variables needed to do so.
+'''
 class World(object):
     def __init__(self, vor):
         self.cells = []
@@ -59,6 +69,9 @@ class World(object):
                     source.add_edge(dest)
                     dest.add_edge(source)
 
+    '''
+    A boundary cell is a cell that extends beyond the edge of the world.
+    '''
     def _label_boundary(self):
         for cell in self.cells:
             region = self.vor.regions[cell.region_idx]
@@ -110,22 +123,44 @@ class World(object):
             if cell.elevation > max_elevation:
                 max_elevation = cell.elevation
 
-        # for cell in self.cells:
-        #     cell.elevation = cell.elevation / max_elevation
+        # A percentage of land cells should take on the height of a random
+        # neighbor cell.
+        for cell in self.cells:
+            if cell.type != Cell.Type.WATER and random.random() < 0.1:
+                # Get all land cells
+                eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, cell.neighbor_to) )
 
+                if len(eligible_neighbors) > 0:
+                    neighbor = random.choice(eligible_neighbors)
+                    cell.elevation = neighbor.elevation
+
+    '''
+    Find the shortest distance from the specified cell to water. Distance is defined
+    as the lowest number of edges in the world graph that need to be traversed to 
+    reach a water cell.
+    '''
     def __distance_from_water(self, cell):
-        queue = [(cell, 0),]
+        queue = collections.deque()
+        queue.append( (cell, 0) )
+
+        # Keep track of which cells have already been searched.
+        added = set()
+        added.add(cell.region_idx)
 
         while len(queue) > 0:
-            (cell, dist) = queue.pop(0)
+            (cell, dist) = queue.popleft()
 
             if cell.type == Cell.Type.WATER:
                 return dist
 
             for next_cell in cell.neighbor_to:
-                queue.append( (next_cell, dist + 1) ) 
+                if next_cell.region_idx not in added:
+                    queue.append( (next_cell, dist + 1) ) 
+                    added.add( next_cell.region_idx )
 
-
+    '''
+    Get Cell by cell_id/region_id.
+    '''
     def get_cell_by_id(self, cell_id):
         for cell in self.cells:
             if cell.region_idx == cell_id:
@@ -133,6 +168,13 @@ class World(object):
         
         return None
     
+    '''
+    Get the polygon that defines the region for the specified cell_id/region_id.
+    Returns a list of 2D points, or an empty list if the region isn't defined within
+    the Voronoi diagram; see more about when this happens here:
+
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+    '''
     def get_region_for_cell(self, cell_id):
         cell = self.get_cell_by_id(cell_id)
 
@@ -176,9 +218,6 @@ class World(object):
 
             num_colors = max(map(lambda c: c.elevation, self.cells))
             gradient = list( color_sealevel.range_to(color_peak, num_colors) )
-
-            for color in gradient:
-                print(color.hex)
 
             for cell in self.cells:
                 # if cell.type == Cell.Type.WATER:
