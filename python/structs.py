@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
-import enum, random, math, colour, collections, pprint
+import enum, random, math, colour, collections
 
 from scipy.spatial import voronoi_plot_2d
+from noise import snoise2
 
 class InvalidCellError(Exception):
     pass
@@ -143,9 +144,29 @@ and position of each. Worlds also include much of the logic for world generation
 configuration variables needed to do so.
 '''
 class World(object):
+    NoiseConfig = {
+        'scale': 0.8,
+        'octaves': 5,
+        'persistence': 0.5,
+        'lacunarity': 2.0,
+        'base': random.randint(0, 1000)
+    }
+
     def __init__(self, vor):
         self.vor = vor
         self.cells = []
+
+    def _gen_noise(self, x, y):
+        scaled_x = x / World.NoiseConfig['scale']
+        scaled_y = y / World.NoiseConfig['scale']
+
+        octaves = World.NoiseConfig['octaves']
+        persistence = World.NoiseConfig['persistence']
+        lacunarity = World.NoiseConfig['lacunarity']
+
+        base = World.NoiseConfig['base']
+
+        return (snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
     def build(self):
         self.cells = self._form_cells()
@@ -155,6 +176,9 @@ class World(object):
         wr = WorldRegion(self.cells, self.vor)
         self._form_plates(wr)
 
+        gen_noise = lambda x, y: self._gen_noise(x, y)
+
+        # Run world generation functions on each plate independently.
         for plate_id in set([c.plate_id for c in self.cells]):
             cells = [c for c in self.cells if c.plate_id == plate_id]
 
@@ -162,13 +186,7 @@ class World(object):
 
             self._add_ocean(region)
             self._terrainify(region)
-            self._add_elevation(region)
-        # Run world generation functions on each plate independently.
-
-        # self._add_ocean()
-        # self._terrainify()
-        # self._add_elevation()
-
+            self._add_elevation(region, gen_noise)
 
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)
@@ -202,7 +220,7 @@ class World(object):
                 if remaining == 0:
                     break
 
-            print(remaining)
+            # print(remaining)
             # There's a chance to add a new plate each iteration. New plates
             # can only exist in unmarked cells.
             # if random.random() < 0.05:
@@ -274,25 +292,35 @@ class World(object):
             if not cell.type == Cell.Type.WATER:
                 cell.type = Cell.Type.LAND
 
-    def _add_elevation(self, region):
-        max_elevation = 0
+    def _add_elevation(self, region, gen_noise):
+        # max_elevation = 0
 
         for cell in region.cells:
-            cell.elevation = self.__distance_from_water(cell, region)
+            if cell.type == Cell.Type.LAND:
+                cell.elevation = gen_noise(cell.location[0], cell.location[1])
 
-            if cell.elevation > max_elevation:
-                max_elevation = cell.elevation
+                dist_from_water = self.__distance_from_water(cell, region)
+
+                if dist_from_water < 5:
+                    fade_pct = [.3, .5, .8, .9]
+                    cell.elevation = cell.elevation * fade_pct[dist_from_water - 1]
+
+                # print(cell.elevation)
+            # cell.elevation = self.__distance_from_water(cell, region)
+
+                # if cell.elevation > max_elevation:
+                #     max_elevation = cell.elevation
 
         # A percentage of land cells should take on the height of a random
         # neighbor cell.
-        for cell in region.cells:
-            if cell.type != Cell.Type.WATER and random.random() < 0.1:
-                # Get all land cells
-                eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, region.neighbors(cell.region_idx)) )
+        # for cell in region.cells:
+        #     if cell.type != Cell.Type.WATER and random.random() < 0.1:
+        #         # Get all land cells
+        #         eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, region.neighbors(cell.region_idx)) )
 
-                if len(eligible_neighbors) > 0:
-                    neighbor = random.choice(eligible_neighbors)
-                    cell.elevation = neighbor.elevation
+        #         if len(eligible_neighbors) > 0:
+        #             neighbor = random.choice(eligible_neighbors)
+        #             cell.elevation = neighbor.elevation
 
     '''
     Find the shortest distance from the specified cell to water. Distance is defined
@@ -376,14 +404,15 @@ class World(object):
             color_sealevel = colour.Color('green')
             color_peak = colour.Color('white')
 
-            num_colors = max(map(lambda c: c.elevation, self.cells))
+            num_colors = 25
             gradient = list( color_sealevel.range_to(color_peak, num_colors) )
 
             for cell in self.cells:
                 # if cell.type == Cell.Type.WATER:
                 #     self.paint_cell(cell.region_idx, '#0485d1')
                 if cell.type == Cell.Type.LAND:
-                    self.paint_cell(cell.region_idx, gradient[cell.elevation - 1].hex)
+                    color_idx = math.floor( cell.elevation / (1.0 / num_colors) )
+                    self.paint_cell(cell.region_idx, gradient[color_idx].hex)
 
         if tectonics:
             num_plates = len( set([c.plate_id for c in self.cells]) )

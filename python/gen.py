@@ -1,7 +1,10 @@
-import random, structs, numpy
+import random, structs, numpy, datetime
 import voronoi
 
-random.seed(3264)
+seed = round( datetime.datetime.now().timestamp() * 10000 )
+random.seed(seed)
+
+print('seed=%d' % (seed,))
 
 # Configuration variables
 PointCount = 1024
@@ -9,18 +12,15 @@ PointCount = 1024
 def point_cloud(n):
     return [(random.random(), random.random()) for _ in range(n)]
 
-# points = numpy.array(point_cloud(PointCount))
-
-# vor = voronoi.generate(points)
-
-vor = voronoi.prebuilt_vor1()
+points = numpy.array(point_cloud(PointCount))
+vor = voronoi.generate(points)
 
 world = structs.World(vor)
 world.build()
 
 ## Render
 world.render(
-    cell_labels=True, 
+    cell_labels=False, 
     color_boundaries=True, 
     cell_elevation=True, 
     show_graph=False, 
