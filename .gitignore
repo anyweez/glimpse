@@ -1,6 +1,2 @@
-node_modules/
-dist/
-worlds/
-
-.DS_Store
-.nyc_output/
+__pycache__
+.coverage
