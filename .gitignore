@@ -1,2 +1,6 @@
 __pycache__
 .coverage
+.DS_Store
+.vscode
+
+world.png
