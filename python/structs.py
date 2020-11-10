@@ -138,23 +138,94 @@ class WorldRegion(object):
         
         return False
 
+    def floodfill(self, region_idx, predicate):
+        if region_idx not in self.cellmap:
+            raise InvalidCellError('Cell does not exist in region')
+
+        cells = [self.cellmap[region_idx], ]
+
+        queue = collections.deque([self.cellmap[region_idx], ])
+        added = set([region_idx,])
+
+        while len(queue) > 0:
+            next_cell = queue.popleft()
+
+            for cell in self.neighbors(next_cell.region_idx):
+                if predicate(cell) and cell.region_idx not in added:
+                    cells.append(cell)
+                    queue.append(cell)
+                    added.add(cell.region_idx)
+
+        return cells
+
+
+class Landform(object):
+    def __init__(self, cells, vor):
+        self.cells = cells
+        self.vor = vor
+    
+    def outline(self):
+        ridges = []
+        inscope_ridge_vertices = []
+
+        for cell in self.cells:
+            inscope_ridge_vertices = inscope_ridge_vertices + self.vor.regions[cell.region_idx]
+
+        for ridge in self.vor.ridge_vertices:
+            valid = True
+
+            for vert in ridge:
+                if vert not in inscope_ridge_vertices or vert == -1:
+                    valid = False
+
+            if valid:
+                ridges.append(ridge)
+
+        # print(ridges)
+
+        out_ridges = []
+
+        for ridge in ridges:
+            out_ridges.append( list(map(lambda v: self.vor.vertices[v], ridge)) )
+
+        print(out_ridges)
+
+        return out_ridges
+        # ridges = []
+
+        # for ridge in [rv for rv in self.vor.ridge_vertices if -1 not in rv]:
+        #     ridge_vertices = list( map(lambda r: self.vor.vertices[r], ridge) )
+
+        #     ridges.append(ridge_vertices)
+        
+        # return ridges
+
 '''
 Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
 and position of each. Worlds also include much of the logic for world generation and any 
 configuration variables needed to do so.
 '''
 class World(object):
+    '''
+    Currently worldwide configuration so elevation looks smooth across nearby landforms and (eventually)
+    underwater surfaces.
+
+    Definition of what these are here:
+    http://libnoise.sourceforge.net/glossary/
+    '''
     NoiseConfig = {
         'scale': 0.8,
         'octaves': 5,
-        'persistence': 0.5,
-        'lacunarity': 2.0,
+        'persistence': 1.5,
+        'lacunarity': 4.0,
         'base': random.randint(0, 1000)
     }
 
     def __init__(self, vor):
         self.vor = vor
         self.cells = []
+
+        self.continents = []
 
     def _gen_noise(self, x, y):
         scaled_x = x / World.NoiseConfig['scale']
@@ -188,6 +259,19 @@ class World(object):
             self._terrainify(region)
             self._add_elevation(region, gen_noise)
 
+    def label(self):
+        wr = WorldRegion(self.cells, self.vor)
+
+        # Start a continuent at a random land cell
+        land_cells = list( filter(lambda c: c.type == Cell.Type.LAND, self.cells) )
+        center = random.choice(land_cells)
+
+        # Flood fill across Land cells to generate the full continent
+        continent_cells = wr.floodfill(center.region_idx, lambda c: c.type == Cell.Type.LAND)
+
+        # Create a Landform and add it to the continent list
+        self.continents.append( Landform(continent_cells, self.vor) )
+
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)
 
@@ -220,17 +304,16 @@ class World(object):
                 if remaining == 0:
                     break
 
-            # print(remaining)
             # There's a chance to add a new plate each iteration. New plates
             # can only exist in unmarked cells.
-            # if random.random() < 0.05:
-            #     avail = [c for c in self.cells if c.plate_id is None]
+            if random.random() < (0.05 / len(plate_centers)):
+                avail = [c for c in self.cells if c.plate_id is None]
 
-            #     if len(avail) > 0:
-            #         cell = random.choice(avail)
+                if len(avail) > 0:
+                    cell = random.choice(avail)
                     
-            #         cell.plate_id = len(plate_centers)
-            #         plate_centers.append(cell)
+                    cell.plate_id = len(plate_centers)
+                    plate_centers.append(cell)
 
     '''
     Generate a series of world cells based on the specified Voronoi diagram. A directed
@@ -382,7 +465,7 @@ class World(object):
         y = list( map(lambda p: p[1], region) )
         plt.fill(x, y, color)
 
-    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False):
+    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False):
         voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
         axes = plt.gca()
 
@@ -436,5 +519,16 @@ class World(object):
 
                 plt.plot(node.location[0], node.location[1], 'bo')
 
+        if outline_landforms:
+            for continent in self.continents:
+                outlines = continent.outline()
+
+                for outline in outlines:
+                    x = (outline[0][0], outline[1][0])
+                    y = (outline[0][1], outline[1][1])
+
+                    plt.plot(x, y, 'black')
+
         plt.title('Rendered world')
+        plt.savefig('world.png')
         plt.show()
