@@ -6,6 +6,10 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
+colour = "*"
+matplotlib = "*"
+noise = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.8"
