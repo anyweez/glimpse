@@ -139,7 +139,8 @@ class WorldRegion(object):
             water_depth[cell.region_idx] = 0
 
         # Find the cell with the lowest elevation out of a list of cells
-        lowest_cell = lambda all_cells: functools.reduce(lambda a, b: a if a.elevation < b.elevation else b, all_cells, all_cells[0])
+        def lowest_cell(all_cells):
+            return functools.reduce(lambda a, b: a if a.elevation < b.elevation else b, all_cells, all_cells[0])
 
         # For each land cell, visit neighbors @ lower elevations until you reach water or don't have
         # neighbors @ lower elevation. If you reach water, end with no side-effects. If you reach a
