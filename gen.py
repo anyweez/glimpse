@@ -5,7 +5,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 100
+PointCount = 2048
 
 print('seed=%d, num_points=%d' % (seed, PointCount))
 
@@ -21,10 +21,11 @@ world.label()
 
 ## Render
 world.render(
-    cell_labels=True, 
+    cell_labels=False, 
     color_boundaries=True, 
     cell_elevation=True, 
     show_graph=False, 
     tectonics=False,
     outline_landforms=True,
+    # heightmap=True
 )

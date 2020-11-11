@@ -1,18 +1,19 @@
 import matplotlib.pyplot as plt
-import enum, random, math, colour, collections
+import enum, random, math, colour, collections, numpy
 
 from scipy.spatial import voronoi_plot_2d
+from PIL import Image
 from noise import snoise2
 
 class InvalidCellError(Exception):
     pass
 
-'''
-Cells represent sections of a World that have certain characteristics like terrain types
-and elevation. Cells are spatially defined by polygons, which are currently equivalent 
-to regions of a Voronoi diagram.
-'''
 class Cell(object):
+    '''
+    Cells represent sections of a World that have certain characteristics like terrain types
+    and elevation. Cells are spatially defined by polygons, which are currently equivalent 
+    to regions of a Voronoi diagram.
+    '''
     Type = enum.Enum('CellType', 'NONE WATER LAND')
 
     def __init__(self, region_idx, location):
@@ -163,61 +164,50 @@ class Landform(object):
     def __init__(self, cells, vor):
         self.cells = cells
         self.vor = vor
+
+        self.included_cells = set()
+        for cell in self.cells:
+            self.included_cells.add(cell.region_idx)
     
+    def contains(self, region_idx):
+        return region_idx in self.included_cells
+
     def outline(self):
         ridges = []
-        inscope_ridge_vertices = []
 
-        for cell in self.cells:
-            inscope_ridge_vertices = inscope_ridge_vertices + self.vor.regions[cell.region_idx]
+        '''
+        get all allowed regions
+        for all ridge vertices
+            check if ridge is in exactly one region
+        '''
+        supported_regions = list( map(lambda cell: self.vor.regions[cell.region_idx], self.cells) )
+
+        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
 
         for ridge in self.vor.ridge_vertices:
-            valid = True
-
-            for vert in ridge:
-                if vert not in inscope_ridge_vertices or vert == -1:
-                    valid = False
-
-            if valid:
+            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
                 ridges.append(ridge)
 
-        # print(ridges)
+        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
 
-        out_ridges = []
 
-        for ridge in ridges:
-            out_ridges.append( list(map(lambda v: self.vor.vertices[v], ridge)) )
-
-        print(out_ridges)
-
-        return out_ridges
-        # ridges = []
-
-        # for ridge in [rv for rv in self.vor.ridge_vertices if -1 not in rv]:
-        #     ridge_vertices = list( map(lambda r: self.vor.vertices[r], ridge) )
-
-        #     ridges.append(ridge_vertices)
-        
-        # return ridges
-
-'''
-Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
-and position of each. Worlds also include much of the logic for world generation and any 
-configuration variables needed to do so.
-'''
 class World(object):
     '''
-    Currently worldwide configuration so elevation looks smooth across nearby landforms and (eventually)
-    underwater surfaces.
-
-    Definition of what these are here:
-    http://libnoise.sourceforge.net/glossary/
+    Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
+    and position of each. Worlds also include much of the logic for world generation and any 
+    configuration variables needed to do so.
     '''
+
+    # Currently worldwide configuration so elevation looks smooth across nearby landforms and (eventually)
+    # underwater surfaces.
+
+    # Definition of what these are here:
+    # http://libnoise.sourceforge.net/glossary/
     NoiseConfig = {
-        'scale': 0.8,
-        'octaves': 5,
-        'persistence': 1.5,
-        'lacunarity': 4.0,
+        'scale': 3.5,           # top tweak
+        'octaves': 4,
+        'persistence': 4.5,
+        'lacunarity': 2.0,
         'base': random.randint(0, 1000)
     }
 
@@ -237,7 +227,7 @@ class World(object):
 
         base = World.NoiseConfig['base']
 
-        return (snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
+        return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
     def build(self):
         self.cells = self._form_cells()
@@ -264,13 +254,14 @@ class World(object):
 
         # Start a continuent at a random land cell
         land_cells = list( filter(lambda c: c.type == Cell.Type.LAND, self.cells) )
-        center = random.choice(land_cells)
+        for cell in land_cells:
+            # if the cell is not yet part of a continent
+            if sum( map(lambda con: con.contains(cell.region_idx), self.continents) ) == 0:
+                # Flood fill across Land cells to generate the full continent
+                continent_cells = wr.floodfill(cell.region_idx, lambda c: c.type == Cell.Type.LAND)
 
-        # Flood fill across Land cells to generate the full continent
-        continent_cells = wr.floodfill(center.region_idx, lambda c: c.type == Cell.Type.LAND)
-
-        # Create a Landform and add it to the continent list
-        self.continents.append( Landform(continent_cells, self.vor) )
+                # Create a Landform and add it to the continent list
+                self.continents.append( Landform(continent_cells, self.vor) )
 
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)
@@ -465,7 +456,7 @@ class World(object):
         y = list( map(lambda p: p[1], region) )
         plt.fill(x, y, color)
 
-    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False):
+    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False, heightmap=False):
         voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
         axes = plt.gca()
 
@@ -527,7 +518,19 @@ class World(object):
                     x = (outline[0][0], outline[1][0])
                     y = (outline[0][1], outline[1][1])
 
-                    plt.plot(x, y, 'black')
+                    plt.plot(x, y, '#222222', linewidth=1)
+
+        if heightmap:
+            grid = numpy.zeros((1000, 1000),)
+
+            for y in range(1000):
+                for x in range(1000):
+                    grid[x][y] = self._gen_noise(x / 1000.0, y / 1000.0)
+
+            grid = (255 * grid).astype('uint8')
+            img = Image.fromarray(grid, mode='L')
+            img.save('heightmap.png')
+            return
 
         plt.title('Rendered world')
         plt.savefig('world.png')
