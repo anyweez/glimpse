@@ -59,20 +59,24 @@ class WorldRegion(object):
     is initialized and only contains edges between cells included in the region.
     '''
     def _build_graph(self):
-        for source in self.cells:
-            for dest in self.cells:
-                if source.region_idx != dest.region_idx:
-                    source_region = set( self.vor.regions[source.region_idx] )
-                    dest_region = set( self.vor.regions[dest.region_idx] )
+        # map vertex_id => region_idx that touch vertex
+        regions_by_vertex = {}
 
-                    if -1 in source_region:
-                        source_region.remove(-1)
-                    if -1 in dest_region:
-                        dest_region.remove(-1)
+        # List all regions that share each vertex
+        for cell in self.cells:
+            for vertex in self.vor.regions[cell.region_idx]:
+                if vertex not in regions_by_vertex:
+                    regions_by_vertex[vertex] = []
 
-                    if not source_region.isdisjoint(dest_region):
-                        self._add_edge(source.region_idx, dest.region_idx)
-                        self._add_edge(dest.region_idx, source.region_idx)
+                regions_by_vertex[vertex].append(cell.region_idx)
+
+        # Run through list of vertices and build edges between all connected regions
+        for (vertex, region_idxs) in regions_by_vertex.items():
+            for source in region_idxs:
+                for dest in region_idxs:
+                    if source != dest:
+                        self._add_edge(source, dest)
+                        self._add_edge(dest, source)
 
     '''
     Counts and caches the number of times each vertex is associated with a cell in the region.
@@ -204,11 +208,15 @@ class World(object):
     # Definition of what these are here:
     # http://libnoise.sourceforge.net/glossary/
     NoiseConfig = {
-        'scale': 3.5,           # top tweak
-        'octaves': 4,
+        'scale': 2.5,           # top tweak
+        'octaves': 5,
         'persistence': 4.5,
         'lacunarity': 2.0,
         'base': random.randint(0, 1000)
+    }
+
+    LandformConfig = {
+        'InitialPlateSplitProb': 0.01,
     }
 
     def __init__(self, vor):
@@ -248,7 +256,7 @@ class World(object):
             self._add_ocean(region)
             self._terrainify(region)
             self._add_elevation(region, gen_noise)
-
+        
     def label(self):
         wr = WorldRegion(self.cells, self.vor)
 
@@ -265,6 +273,7 @@ class World(object):
 
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)
+        plate_dist = [1, 1, 1]  # distance to go out from the center to find available cells
 
         for idx, center in enumerate(plate_centers):
             center.plate_id = idx
@@ -275,16 +284,16 @@ class World(object):
 
         remaining = sum( [1 for cell in region.cells if still_available(cell)] )
 
+
         # Add all cells to a plate
         while remaining > 0:
             # For each plate, expand out from the center
-            for center in plate_centers:
-                dist = 1
-                avail = [c for c in region.neighbors(center.region_idx, dist) if still_available(c)]
+            for plate_id, center in enumerate(plate_centers):
+                avail = [c for c in region.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(c)]
 
                 while len(avail) == 0:
-                    dist += 1
-                    avail = [c for c in region.neighbors(center.region_idx, dist) if still_available(c)]
+                    plate_dist[plate_id] += 1
+                    avail = [c for c in region.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(c)]
 
                 mark = random.choice(avail)
                 mark.plate_id = center.plate_id
@@ -297,7 +306,7 @@ class World(object):
 
             # There's a chance to add a new plate each iteration. New plates
             # can only exist in unmarked cells.
-            if random.random() < (0.05 / len(plate_centers)):
+            if random.random() < (World.LandformConfig['InitialPlateSplitProb'] / len(plate_centers)):
                 avail = [c for c in self.cells if c.plate_id is None]
 
                 if len(avail) > 0:
@@ -305,6 +314,7 @@ class World(object):
                     
                     cell.plate_id = len(plate_centers)
                     plate_centers.append(cell)
+                    plate_dist.append(1) # all plates start at dist=1
 
     '''
     Generate a series of world cells based on the specified Voronoi diagram. A directed
@@ -312,6 +322,7 @@ class World(object):
     '''
     def _form_cells(self):
         cells = []
+
         for point_idx, region_idx in enumerate(self.vor.point_region):
             cell = Cell(region_idx, self.vor.points[point_idx])
 
