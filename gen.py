@@ -5,7 +5,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 4000
+PointCount = 3500
 
 def main():
     print('seed=%d, num_points=%d' % (seed, PointCount))
@@ -28,7 +28,7 @@ def main():
         show_graph=False, 
         tectonics=False,
         outline_landforms=True,
-        # heightmap=True
+        heightmap=True
     )
 
 main()

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import enum, random, math, colour, collections, numpy
+import enum, random, math, colour, collections, numpy, functools, string
 
 from scipy.spatial import voronoi_plot_2d
 from PIL import Image
@@ -14,7 +14,7 @@ class Cell(object):
     and elevation. Cells are spatially defined by polygons, which are currently equivalent 
     to regions of a Voronoi diagram.
     '''
-    Type = enum.Enum('CellType', 'NONE WATER LAND')
+    Type = enum.Enum('CellType', 'NONE WATER LAND FIRE')
 
     def __init__(self, region_idx, location):
         self.region_idx = region_idx
@@ -127,6 +127,73 @@ class WorldRegion(object):
 
         return by_distance[dist - 1]
 
+    def watershed(self):
+        '''
+        Create lakes in low 'bowls' where water runs downhill and doesn't have a way to get out to an
+        ocean. Simulate rainfall and fill areas at the bottom of the hill.
+        '''
+
+        water_depth = {}
+
+        for cell in self.cells:
+            water_depth[cell.region_idx] = 0
+
+        # Find the cell with the lowest elevation out of a list of cells
+        lowest_cell = lambda all_cells: functools.reduce(lambda a, b: a if a.elevation < b.elevation else b, all_cells, all_cells[0])
+
+        # For each land cell, visit neighbors @ lower elevations until you reach water or don't have
+        # neighbors @ lower elevation. If you reach water, end with no side-effects. If you reach a
+        # bowl, increase water depth by one.
+        for current_cell in [c for c in self.cells if c.type == Cell.Type.LAND]:
+            neighbors = self.neighbors(current_cell.region_idx)
+            next_cell = lowest_cell(neighbors)
+
+            # Keep flowing while 
+            while next_cell.elevation < current_cell.elevation:
+                current_cell = next_cell
+
+                neighbors = self.neighbors(current_cell.region_idx)
+                next_cell = lowest_cell(neighbors)
+
+                # If we've hit a cell that's already water, finish.
+                if next_cell.type == Cell.Type.WATER:
+                    break
+            
+            # If we ended on land, increase water depth.
+            if next_cell.type == Cell.Type.LAND:
+                water_depth[next_cell.region_idx] += 1
+
+        # Convert cells to water if enough water has pooled up. If the pool is big enough, start
+        # filling up surrounding cells as well.
+        for (region_idx, depth) in water_depth.items():
+            if depth > 5:
+                cell = self.cell_by_region_idx(region_idx)
+                cell.type = Cell.Type.WATER
+
+                pool = [cell,]
+
+                # If we've over-filled a cell, flow into the next lowest cell connected to the pool.
+                # Each time the pool expands, future expansions can go into the neighboring LAND cells
+                # connected to any part of the pool. The lowest elevation cell will always be selected.
+                for _ in range( math.floor(depth / 10) ):
+                    neighbors = []
+                    for c in pool:
+                        for neighbor in [n for n in self.neighbors(c.region_idx) if n.type == Cell.Type.LAND]:
+                            neighbors.append(neighbor)
+    
+                    lowest = lowest_cell(neighbors)
+
+                    lowest.type = Cell.Type.WATER
+                    pool.append(lowest)
+
+
+    def cell_by_region_idx(self, region_idx):
+        for cell in self.cells:
+            if cell.region_idx == region_idx:
+                return cell
+
+        return None
+
     '''
     Check whether the specified region is on the 'border' of the region. A cell is on the border if
     it contains a vertex that isn't shared by any other cell in the region.
@@ -224,6 +291,7 @@ class World(object):
         self.cells = []
 
         self.continents = []
+        self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
     def _gen_noise(self, x, y):
         scaled_x = x / World.NoiseConfig['scale']
@@ -256,6 +324,8 @@ class World(object):
             self._add_ocean(region)
             self._terrainify(region)
             self._add_elevation(region, gen_noise)
+            
+            region.watershed()
         
     def label(self):
         wr = WorldRegion(self.cells, self.vor)
@@ -378,34 +448,23 @@ class World(object):
                 cell.type = Cell.Type.LAND
 
     def _add_elevation(self, region, gen_noise):
-        # max_elevation = 0
+        # Different regions may have different elevation profiles - some will be more
+        # mountainous and others may be flatter. The 'dampener' approximates this profile
+        # and is assigned randomly. Regions with smaller dampener values will tend to be
+        # flatter.
+        #
+        # TODO: improve this -- really cool effect but did this in 30 seconds
+        dampener = random.choice([0.4, 0.4, 0.6, 1.0])
 
         for cell in region.cells:
             if cell.type == Cell.Type.LAND:
-                cell.elevation = gen_noise(cell.location[0], cell.location[1])
+                cell.elevation = gen_noise(cell.location[0], cell.location[1]) * dampener
 
                 dist_from_water = self.__distance_from_water(cell, region)
 
                 if dist_from_water < 5:
                     fade_pct = [.3, .5, .8, .9]
                     cell.elevation = cell.elevation * fade_pct[dist_from_water - 1]
-
-                # print(cell.elevation)
-            # cell.elevation = self.__distance_from_water(cell, region)
-
-                # if cell.elevation > max_elevation:
-                #     max_elevation = cell.elevation
-
-        # A percentage of land cells should take on the height of a random
-        # neighbor cell.
-        # for cell in region.cells:
-        #     if cell.type != Cell.Type.WATER and random.random() < 0.1:
-        #         # Get all land cells
-        #         eligible_neighbors = list( filter(lambda c: c.type != Cell.Type.WATER, region.neighbors(cell.region_idx)) )
-
-        #         if len(eligible_neighbors) > 0:
-        #             neighbor = random.choice(eligible_neighbors)
-        #             cell.elevation = neighbor.elevation
 
     '''
     Find the shortest distance from the specified cell to water. Distance is defined
@@ -484,10 +543,12 @@ class World(object):
                     self.paint_cell(cell.region_idx, '#0485d1')
                 if cell.type == Cell.Type.LAND:
                     self.paint_cell(cell.region_idx, 'g')
+                if cell.type == Cell.Type.FIRE:
+                    self.paint_cell(cell.region_idx, 'red')
 
         if cell_elevation:
             color_sealevel = colour.Color('green')
-            color_peak = colour.Color('white')
+            color_peak = colour.Color('red')
 
             num_colors = 25
             gradient = list( color_sealevel.range_to(color_peak, num_colors) )
@@ -541,8 +602,8 @@ class World(object):
             grid = (255 * grid).astype('uint8')
             img = Image.fromarray(grid, mode='L')
             img.save('heightmap.png')
-            return
 
         plt.title('Rendered world')
-        plt.savefig('world.png')
-        plt.show()
+
+        plt.savefig('world-%s.png' % (self.id,))
+        # plt.show()
