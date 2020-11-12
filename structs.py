@@ -107,103 +107,6 @@ class AbstractCellGroup(object):
 class WorldRegion(AbstractCellGroup):
     def __init__(self, cells, vor, graph):  
         super().__init__(cells, vor, graph)
-        # self.cells = cells
-        # self.vor = vor
-        # self.graph = graph
-
-        # self.available_cells = set( map(lambda c: c.region_idx, self.cells) )
-
-        # 'Neighbor map': Map the idx of the cell in self.cells to the idx of all neighbors
-        # self.nmap = {}
-
-        # self.cellmap = {}
-
-        # for cell in cells:
-        #     self.cellmap[cell.region_idx] = cell
-        #     self.nmap[cell.region_idx] = set()
-
-        # Count the number of appearances of each vertex. Regions that contain the sole reference to
-        # a vertex are on the 'border' of the graph.
-        # self.vertex_count = {}
-
-        # self._build_graph()
-        # self._count_vertices()
-
-    # def _add_edge(self, src_idx, dest_idx):
-    #     self.nmap[src_idx].add(dest_idx)
-
-    # '''
-    # Build a graph connecting notes that share vertices. This graph is built when the WorldRegion
-    # is initialized and only contains edges between cells included in the region.
-    # '''
-    # def _build_graph(self):
-    #     # map vertex_id => region_idx that touch vertex
-    #     regions_by_vertex = {}
-
-    #     # List all regions that share each vertex
-    #     for cell in self.cells:
-    #         for vertex in self.vor.regions[cell.region_idx]:
-    #             if vertex not in regions_by_vertex:
-    #                 regions_by_vertex[vertex] = []
-
-    #             regions_by_vertex[vertex].append(cell.region_idx)
-
-    #     # Run through list of vertices and build edges between all connected regions
-    #     for (vertex, region_idxs) in regions_by_vertex.items():
-    #         for source in region_idxs:
-    #             for dest in region_idxs:
-    #                 if source != dest:
-    #                     self._add_edge(source, dest)
-    #                     self._add_edge(dest, source)
-
-    '''
-    Counts and caches the number of times each vertex is associated with a cell in the region.
-    If a vertex only appears once, then the cell the vertex is associated with is considered a 
-    'border' cell -- see WorldRegion.is_border() for more.
-    '''
-    # def _count_vertices(self):
-    #     for cell in self.cells:
-    #         indeces = set( self.vor.regions[cell.region_idx] )
-
-    #         for idx in indeces:
-    #             if idx not in self.vertex_count:
-    #                 self.vertex_count[idx] = 0
-                
-    #             self.vertex_count[idx] += 1
-
-    # def neighbors(self, region_idx, dist=1):
-    #     if region_idx not in self.cellmap:
-    #         raise errors.InvalidCellError('Cell does not exist in region')
-
-    #     # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
-    #     # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
-    #     if dist == 1:
-    #         return list( map(lambda idx: self.cellmap[idx], self.nmap[region_idx]) )
-
-    #     by_distance = []
-    #     added = set([self.cellmap[region_idx],])
-
-    #     for curr_dist in range(dist):
-    #         if curr_dist == 0:
-    #             by_distance.append( self.neighbors(region_idx, dist=1) )
-
-    #             for c in by_distance[curr_dist]:
-    #                 added.add(c)
-
-    #         else:
-    #             next_round = set()
-    #             for parent in by_distance[curr_dist - 1]:
-    #                 for cell in self.neighbors(parent.region_idx, dist=1):
-    #                     next_round.add(cell)
-
-    #             next_round = list( next_round )
-    #             # De-duplicate and flatten a list of the neighbors of all cells
-    #             by_distance.append( [c for c in next_round if c not in added] )
-
-    #             for c in by_distance[curr_dist]:
-    #                 added.add(c)
-
-    #     return by_distance[dist - 1]
 
     def watershed(self):
         '''
@@ -265,14 +168,6 @@ class WorldRegion(AbstractCellGroup):
                     lowest.type = Cell.Type.WATER
                     pool.append(lowest)
 
-
-    # def cell_by_region_idx(self, region_idx):
-    #     for cell in self.cells:
-    #         if cell.region_idx == region_idx:
-    #             return cell
-
-    #     return None
-
     '''
     Check whether the specified region is on the 'border' of the region. A cell is on the border if
     it contains a vertex that isn't shared by any other cell in the region.
@@ -287,6 +182,7 @@ class WorldRegion(AbstractCellGroup):
         
         return False
 
+    # TODO: use graph?
     def floodfill(self, region_idx, predicate):
         try:
             cells = [self.get_cell(region_idx), ]
@@ -311,13 +207,8 @@ class WorldRegion(AbstractCellGroup):
 class Landform(AbstractCellGroup):
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
-        # self.cells = cells
-        # self.vor = vor
 
-        # self.included_cells = set()
-        # for cell in self.cells:
-        #     self.included_cells.add(cell.region_idx)
-    
+    # TODO: move to AbstractCellGroup?
     def contains(self, region_idx):
         try:
             return self.get_cell(region_idx)
@@ -370,12 +261,6 @@ class World(AbstractCellGroup):
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
 
-        # self.vor = vor
-        # self.cells = []
-        # self.celldict = {}
-
-        # self.graph = None
-
         self.continents = []
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
@@ -398,12 +283,6 @@ class World(AbstractCellGroup):
         return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
     def build(self):
-        # self.cells = self._form_cells()
-        # self.graph = graph.BuildGraph(self.cells, self.vor)
-
-        # for cell in self.cells:
-        #     self.celldict[cell.region_idx] = cell
-
         self._label_boundary(self.cells)
 
         # Establish tectonic plates. Once this is done we'll create a separate region for each.
@@ -482,17 +361,6 @@ class World(AbstractCellGroup):
                     cell.plate_id = len(plate_centers)
                     plate_centers.append(cell)
                     plate_dist.append(1) # all plates start at dist=1
-
-
-    # def _form_cells(self):
-    #     cells = []
-
-    #     for point_idx, region_idx in enumerate(self.vor.point_region):
-    #         cell = Cell(region_idx, self.vor.points[point_idx])
-
-    #         cells.append(cell)
-
-    #     return cells
 
     '''
     A boundary cell is a cell that extends beyond the edge of the world.
@@ -584,44 +452,6 @@ class World(AbstractCellGroup):
                 if next_idx not in added:
                     queue.append( (next_idx, dist + 1) ) 
                     added.add( next_idx )
-
-    # '''
-    # Get Cell by cell_id/region_id.
-    # '''
-    # def get_cell_by_id(self, cell_id):
-    #     for cell in self.cells:
-    #         if cell.region_idx == cell_id:
-    #             return cell
-        
-    #     return None
-    
-    # def get_cell(self, region_idx):
-    #     return self.celldict[region_idx]
-
-    # def get_cells(self, region_idxs):
-    #     return list( map(lambda idx: self.celldict[idx], region_idxs) )
-
-    # '''
-    # Get the polygon that defines the region for the specified cell_id/region_id.
-    # Returns a list of 2D points, or an empty list if the region isn't defined within
-    # the Voronoi diagram; see more about when this happens here:
-
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
-    # '''
-    # def get_region(self, region_idx):
-    #     if -1 in self.vor.regions[region_idx]:
-    #         return []
-
-    #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
-
-
-    # def get_region_for_cell(self, cell_id):
-    #     cell = self.get_cell_by_id(cell_id)
-
-    #     if -1 in self.vor.regions[cell.region_idx]:
-    #         return []
-
-    #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[cell.region_idx]) )
 
     def render(self, cities=[], cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False, heightmap=False):
         def paint_cell(cell_id, color):

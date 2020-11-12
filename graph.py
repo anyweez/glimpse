@@ -22,7 +22,6 @@ class Graph(object):
         # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
         if dist == 1:
             return self.directed_edgedict[region_idx]
-            # return list( map(lambda idx: self.cellmap[idx], self.nmap[region_idx]) )
 
         by_distance = []
         added = set( [region_idx,] )
