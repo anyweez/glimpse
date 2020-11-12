@@ -1,11 +1,11 @@
 import random, structs, numpy, datetime, sys, multiprocessing
-import voronoi
+import voronoi, civilization, graph
 
 seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 3500
+PointCount = 2000
 NumWorlds = 1
 
 if len(sys.argv) > 1:
@@ -16,17 +16,30 @@ def generate(world_idx):
         return [(random.random(), random.random()) for _ in range(n)]
 
     points = numpy.array(point_cloud(PointCount))
-    vor = voronoi.generate(points)
 
-    world = structs.World(vor)
+    vor = voronoi.generate(points)
+    cells = structs.Cell.FormCells(vor)
+    worldgraph = graph.BuildGraph(cells, vor)
+
+    world = structs.World(cells, vor, worldgraph)
 
     print('  Generating world #%d [%s]...' % (world_idx + 1, world.id,))
 
     world.build()
     world.label()
 
+    print('  Establishing civilization [%s]...' % (world_idx,))
+
+    cities = []
+    # for _ in range(5):
+    #     city = civilization.PlaceCity(world, cities)
+
+    #     print(city.location)
+    #     cities.append(city)
+
     ## Render
     world.render(
+        cities=cities,
         cell_labels=False, 
         color_boundaries=True, 
         cell_elevation=True, 

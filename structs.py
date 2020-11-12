@@ -1,12 +1,10 @@
 import matplotlib.pyplot as plt
-import enum, random, math, colour, collections, numpy, functools, string
+import enum, random, math, colour, collections, numpy, functools, string, pprint
+import errors
 
 from scipy.spatial import voronoi_plot_2d
 from PIL import Image
 from noise import snoise2
-
-class InvalidCellError(Exception):
-    pass
 
 class Cell(object):
     '''
@@ -30,62 +28,37 @@ class Cell(object):
         # What tectonic plate is this cell a part of?
         self.plate_id = None
 
-class WorldRegion(object):
-    def __init__(self, cells, vor):        
+    @staticmethod
+    def FormCells(vor):
+        '''
+        Generate a series of world cells based on the specified Voronoi diagram. A directed
+        graph is also calculated based on which cells are touching each other.
+        '''
+        cells = []
+
+        for point_idx, region_idx in enumerate(vor.point_region):
+            cell = Cell(region_idx, vor.points[point_idx])
+
+            cells.append(cell)
+
+        return cells
+
+class AbstractCellGroup(object):
+    def __init__(self, cells, vor, graph):
         self.cells = cells
         self.vor = vor
+        self.graph = graph
 
-        # 'Neighbor map': Map the idx of the cell in self.cells to the idx of all neighbors
-        self.nmap = {}
-
-        self.cellmap = {}
-
-        for cell in cells:
-            self.cellmap[cell.region_idx] = cell
-            self.nmap[cell.region_idx] = set()
-
-        # Count the number of appearances of each vertex. Regions that contain the sole reference to
-        # a vertex are on the 'border' of the graph.
+        self.available_cells = {}
         self.vertex_count = {}
 
-        self._build_graph()
-        self._count_vertices()
-
-    def _add_edge(self, src_idx, dest_idx):
-        self.nmap[src_idx].add(dest_idx)
-
-    '''
-    Build a graph connecting notes that share vertices. This graph is built when the WorldRegion
-    is initialized and only contains edges between cells included in the region.
-    '''
-    def _build_graph(self):
-        # map vertex_id => region_idx that touch vertex
-        regions_by_vertex = {}
-
-        # List all regions that share each vertex
+        # Populate self.available_cells
         for cell in self.cells:
-            for vertex in self.vor.regions[cell.region_idx]:
-                if vertex not in regions_by_vertex:
-                    regions_by_vertex[vertex] = []
+            self.available_cells[cell.region_idx] = cell
 
-                regions_by_vertex[vertex].append(cell.region_idx)
-
-        # Run through list of vertices and build edges between all connected regions
-        for (vertex, region_idxs) in regions_by_vertex.items():
-            for source in region_idxs:
-                for dest in region_idxs:
-                    if source != dest:
-                        self._add_edge(source, dest)
-                        self._add_edge(dest, source)
-
-    '''
-    Counts and caches the number of times each vertex is associated with a cell in the region.
-    If a vertex only appears once, then the cell the vertex is associated with is considered a 
-    'border' cell -- see WorldRegion.is_border() for more.
-    '''
-    def _count_vertices(self):
+        # Populate self.vertex_count
         for cell in self.cells:
-            indeces = set( self.vor.regions[cell.region_idx] )
+            indeces = set( vor.regions[cell.region_idx] )
 
             for idx in indeces:
                 if idx not in self.vertex_count:
@@ -93,39 +66,144 @@ class WorldRegion(object):
                 
                 self.vertex_count[idx] += 1
 
-    def neighbors(self, region_idx, dist=1):
-        if region_idx not in self.cellmap:
-            raise InvalidCellError('Cell does not exist in region')
+    def get_region(self, region_idx):
+        '''
+        Get the polygon that defines the region for the specified cell_id/region_id.
+        Returns a list of 2D points, or an empty list if the region isn't defined within
+        the Voronoi diagram; see more about when this happens here:
 
-        # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
-        # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
-        if dist == 1:
-            return list( map(lambda idx: self.cellmap[idx], self.nmap[region_idx]) )
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+        '''
+        if -1 in self.vor.regions[region_idx]:
+            return []
 
-        by_distance = []
-        added = set([self.cellmap[region_idx],])
+        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
 
-        for curr_dist in range(dist):
-            if curr_dist == 0:
-                by_distance.append( self.neighbors(region_idx, dist=1) )
+    def get_vertices(self, region_idx):
+        if -1 in self.vor.regions[region_idx]:
+            return []
 
-                for c in by_distance[curr_dist]:
-                    added.add(c)
+        return self.vor.regions[region_idx]
 
-            else:
-                next_round = set()
-                for parent in by_distance[curr_dist - 1]:
-                    for cell in self.neighbors(parent.region_idx, dist=1):
-                        next_round.add(cell)
+    def get_cell(self, region_idx):
+        if region_idx not in self.available_cells:
+            raise errors.InvalidCellError('Requested non-existant or out of scope cell #%d' % (region_idx,))
 
-                next_round = list( next_round )
-                # De-duplicate and flatten a list of the neighbors of all cells
-                by_distance.append( [c for c in next_round if c not in added] )
+        return self.available_cells[region_idx]
 
-                for c in by_distance[curr_dist]:
-                    added.add(c)
+    def get_cells(self, region_idxs):
+        # NOTE TO FUTURE SELF: I'm intentionally deciding that this function should only
+        # return the cells that exist in scope. I'm running into an issue where the graph
+        # is aware of all worldwide cells but worldregions only have access to certain cells.
+        #
+        # I expect this is going to be a fairly common case, and regions should never operate
+        # on cells outside of their scope so I think its safe to make this decision. I have
+        # a troubling feeling that not providing any notification is going to generate nasty
+        # bugs, though.
+        return [self.available_cells[idx] for idx in region_idxs if idx in self.available_cells]
 
-        return by_distance[dist - 1]
+
+
+class WorldRegion(AbstractCellGroup):
+    def __init__(self, cells, vor, graph):  
+        super().__init__(cells, vor, graph)
+        # self.cells = cells
+        # self.vor = vor
+        # self.graph = graph
+
+        # self.available_cells = set( map(lambda c: c.region_idx, self.cells) )
+
+        # 'Neighbor map': Map the idx of the cell in self.cells to the idx of all neighbors
+        # self.nmap = {}
+
+        # self.cellmap = {}
+
+        # for cell in cells:
+        #     self.cellmap[cell.region_idx] = cell
+        #     self.nmap[cell.region_idx] = set()
+
+        # Count the number of appearances of each vertex. Regions that contain the sole reference to
+        # a vertex are on the 'border' of the graph.
+        # self.vertex_count = {}
+
+        # self._build_graph()
+        # self._count_vertices()
+
+    # def _add_edge(self, src_idx, dest_idx):
+    #     self.nmap[src_idx].add(dest_idx)
+
+    # '''
+    # Build a graph connecting notes that share vertices. This graph is built when the WorldRegion
+    # is initialized and only contains edges between cells included in the region.
+    # '''
+    # def _build_graph(self):
+    #     # map vertex_id => region_idx that touch vertex
+    #     regions_by_vertex = {}
+
+    #     # List all regions that share each vertex
+    #     for cell in self.cells:
+    #         for vertex in self.vor.regions[cell.region_idx]:
+    #             if vertex not in regions_by_vertex:
+    #                 regions_by_vertex[vertex] = []
+
+    #             regions_by_vertex[vertex].append(cell.region_idx)
+
+    #     # Run through list of vertices and build edges between all connected regions
+    #     for (vertex, region_idxs) in regions_by_vertex.items():
+    #         for source in region_idxs:
+    #             for dest in region_idxs:
+    #                 if source != dest:
+    #                     self._add_edge(source, dest)
+    #                     self._add_edge(dest, source)
+
+    '''
+    Counts and caches the number of times each vertex is associated with a cell in the region.
+    If a vertex only appears once, then the cell the vertex is associated with is considered a 
+    'border' cell -- see WorldRegion.is_border() for more.
+    '''
+    # def _count_vertices(self):
+    #     for cell in self.cells:
+    #         indeces = set( self.vor.regions[cell.region_idx] )
+
+    #         for idx in indeces:
+    #             if idx not in self.vertex_count:
+    #                 self.vertex_count[idx] = 0
+                
+    #             self.vertex_count[idx] += 1
+
+    # def neighbors(self, region_idx, dist=1):
+    #     if region_idx not in self.cellmap:
+    #         raise errors.InvalidCellError('Cell does not exist in region')
+
+    #     # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
+    #     # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
+    #     if dist == 1:
+    #         return list( map(lambda idx: self.cellmap[idx], self.nmap[region_idx]) )
+
+    #     by_distance = []
+    #     added = set([self.cellmap[region_idx],])
+
+    #     for curr_dist in range(dist):
+    #         if curr_dist == 0:
+    #             by_distance.append( self.neighbors(region_idx, dist=1) )
+
+    #             for c in by_distance[curr_dist]:
+    #                 added.add(c)
+
+    #         else:
+    #             next_round = set()
+    #             for parent in by_distance[curr_dist - 1]:
+    #                 for cell in self.neighbors(parent.region_idx, dist=1):
+    #                     next_round.add(cell)
+
+    #             next_round = list( next_round )
+    #             # De-duplicate and flatten a list of the neighbors of all cells
+    #             by_distance.append( [c for c in next_round if c not in added] )
+
+    #             for c in by_distance[curr_dist]:
+    #                 added.add(c)
+
+    #     return by_distance[dist - 1]
 
     def watershed(self):
         '''
@@ -146,14 +224,14 @@ class WorldRegion(object):
         # neighbors @ lower elevation. If you reach water, end with no side-effects. If you reach a
         # bowl, increase water depth by one.
         for current_cell in [c for c in self.cells if c.type == Cell.Type.LAND]:
-            neighbors = self.neighbors(current_cell.region_idx)
+            neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
             next_cell = lowest_cell(neighbors)
 
             # Keep flowing while 
             while next_cell.elevation < current_cell.elevation:
                 current_cell = next_cell
 
-                neighbors = self.neighbors(current_cell.region_idx)
+                neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
                 next_cell = lowest_cell(neighbors)
 
                 # If we've hit a cell that's already water, finish.
@@ -168,7 +246,7 @@ class WorldRegion(object):
         # filling up surrounding cells as well.
         for (region_idx, depth) in water_depth.items():
             if depth > 5:
-                cell = self.cell_by_region_idx(region_idx)
+                cell = self.get_cell(region_idx)
                 cell.type = Cell.Type.WATER
 
                 pool = [cell,]
@@ -179,7 +257,7 @@ class WorldRegion(object):
                 for _ in range( math.floor(depth / 10) ):
                     neighbors = []
                     for c in pool:
-                        for neighbor in [n for n in self.neighbors(c.region_idx) if n.type == Cell.Type.LAND]:
+                        for neighbor in [n for n in self.get_cells( self.graph.neighbors(c.region_idx) ) if n.type == Cell.Type.LAND]:
                             neighbors.append(neighbor)
     
                     lowest = lowest_cell(neighbors)
@@ -188,61 +266,63 @@ class WorldRegion(object):
                     pool.append(lowest)
 
 
-    def cell_by_region_idx(self, region_idx):
-        for cell in self.cells:
-            if cell.region_idx == region_idx:
-                return cell
+    # def cell_by_region_idx(self, region_idx):
+    #     for cell in self.cells:
+    #         if cell.region_idx == region_idx:
+    #             return cell
 
-        return None
+    #     return None
 
     '''
     Check whether the specified region is on the 'border' of the region. A cell is on the border if
     it contains a vertex that isn't shared by any other cell in the region.
     '''
     def is_border(self, region_idx):
-        if region_idx not in self.cellmap:
-            raise InvalidCellError('Cell does not exist in region')
+        if region_idx not in self.available_cells:
+            raise errors.InvalidCellError('Cell does not exist in region')
 
-        region = self.vor.regions[region_idx]
-
-        for r in region:
+        for r in self.get_vertices(region_idx):
             if self.vertex_count[r] == 1:
                 return True
         
         return False
 
     def floodfill(self, region_idx, predicate):
-        if region_idx not in self.cellmap:
-            raise InvalidCellError('Cell does not exist in region')
+        try:
+            cells = [self.get_cell(region_idx), ]
 
-        cells = [self.cellmap[region_idx], ]
+            queue = collections.deque([self.get_cell(region_idx),])
+            added = set([region_idx,])
 
-        queue = collections.deque([self.cellmap[region_idx], ])
-        added = set([region_idx,])
+            while len(queue) > 0:
+                next_cell = queue.popleft()
 
-        while len(queue) > 0:
-            next_cell = queue.popleft()
+                for cell in self.get_cells( self.graph.neighbors(next_cell.region_idx) ):
+                    if predicate(cell) and cell.region_idx not in added:
+                        cells.append(cell)
+                        queue.append(cell)
+                        added.add(cell.region_idx)
 
-            for cell in self.neighbors(next_cell.region_idx):
-                if predicate(cell) and cell.region_idx not in added:
-                    cells.append(cell)
-                    queue.append(cell)
-                    added.add(cell.region_idx)
-
-        return cells
+            return cells
+        except errors.InvalidCellError as e:
+            raise e
 
 
-class Landform(object):
-    def __init__(self, cells, vor):
-        self.cells = cells
-        self.vor = vor
+class Landform(AbstractCellGroup):
+    def __init__(self, cells, vor, graph):
+        super().__init__(cells, vor, graph)
+        # self.cells = cells
+        # self.vor = vor
 
-        self.included_cells = set()
-        for cell in self.cells:
-            self.included_cells.add(cell.region_idx)
+        # self.included_cells = set()
+        # for cell in self.cells:
+        #     self.included_cells.add(cell.region_idx)
     
     def contains(self, region_idx):
-        return region_idx in self.included_cells
+        try:
+            return self.get_cell(region_idx)
+        except errors.InvalidCellError:
+            return False
 
     def outline(self):
         ridges = []
@@ -263,7 +343,7 @@ class Landform(object):
         return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
 
 
-class World(object):
+class World(AbstractCellGroup):
     '''
     Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
     and position of each. Worlds also include much of the logic for world generation and any 
@@ -287,12 +367,23 @@ class World(object):
         'InitialPlateSplitProb': 0.01,
     }
 
-    def __init__(self, vor):
-        self.vor = vor
-        self.cells = []
+    def __init__(self, cells, vor, graph):
+        super().__init__(cells, vor, graph)
+
+        # self.vor = vor
+        # self.cells = []
+        # self.celldict = {}
+
+        # self.graph = None
 
         self.continents = []
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+    def CreateRegion(self, cells):
+        if self.graph is None:
+            raise Exception('You must build() the world before you can create regions in it.')
+
+        return WorldRegion(cells, self.vor, self.graph)
 
     def _gen_noise(self, x, y):
         scaled_x = x / World.NoiseConfig['scale']
@@ -307,20 +398,25 @@ class World(object):
         return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
     def build(self):
-        self.cells = self._form_cells()
+        # self.cells = self._form_cells()
+        # self.graph = graph.BuildGraph(self.cells, self.vor)
+
+        # for cell in self.cells:
+        #     self.celldict[cell.region_idx] = cell
+
         self._label_boundary(self.cells)
 
         # Establish tectonic plates. Once this is done we'll create a separate region for each.
-        wr = WorldRegion(self.cells, self.vor)
+        wr = self.CreateRegion(self.cells)
         self._form_plates(wr)
 
         gen_noise = lambda x, y: self._gen_noise(x, y)
 
         # Run world generation functions on each plate independently.
-        for plate_id in set([c.plate_id for c in self.cells]):
+        for plate_id in set( [c.plate_id for c in self.cells] ):
             cells = [c for c in self.cells if c.plate_id == plate_id]
 
-            region = WorldRegion(cells, self.vor)
+            region = self.CreateRegion(cells)
 
             self._add_ocean(region)
             self._terrainify(region)
@@ -329,18 +425,19 @@ class World(object):
             region.watershed()
         
     def label(self):
-        wr = WorldRegion(self.cells, self.vor)
+        wr = self.CreateRegion(self.cells)
 
         # Start a continuent at a random land cell
         land_cells = list( filter(lambda c: c.type == Cell.Type.LAND, self.cells) )
+
         for cell in land_cells:
             # if the cell is not yet part of a continent
-            if sum( map(lambda con: con.contains(cell.region_idx), self.continents) ) == 0:
+            if len( list(filter(lambda con: con.contains(cell.region_idx), self.continents)) ) == 0:
                 # Flood fill across Land cells to generate the full continent
                 continent_cells = wr.floodfill(cell.region_idx, lambda c: c.type == Cell.Type.LAND)
 
                 # Create a Landform and add it to the continent list
-                self.continents.append( Landform(continent_cells, self.vor) )
+                self.continents.append( Landform(continent_cells, self.vor, self.graph) )
 
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)
@@ -351,26 +448,25 @@ class World(object):
 
         # Function to check whether a cell still needs to have a plate assigned. Boundary cells
         # are excluded.
-        still_available = lambda cell: cell.plate_id is None
+        still_available = lambda idx: self.get_cell(idx).plate_id is None
 
-        remaining = sum( [1 for cell in region.cells if still_available(cell)] )
-
+        remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
 
         # Add all cells to a plate
         while remaining > 0:
             # For each plate, expand out from the center
             for plate_id, center in enumerate(plate_centers):
-                avail = [c for c in region.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(c)]
+                avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
 
                 while len(avail) == 0:
                     plate_dist[plate_id] += 1
-                    avail = [c for c in region.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(c)]
+                    avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
 
-                mark = random.choice(avail)
+                mark = self.get_cell( random.choice(avail) )
                 mark.plate_id = center.plate_id
 
                 # Count remaining cells to be marked; break the loop if we're done.
-                remaining = sum( [1 for cell in region.cells if still_available(cell)] )
+                remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
 
                 if remaining == 0:
                     break
@@ -387,33 +483,28 @@ class World(object):
                     plate_centers.append(cell)
                     plate_dist.append(1) # all plates start at dist=1
 
-    '''
-    Generate a series of world cells based on the specified Voronoi diagram. A directed
-    graph is also calculated based on which cells are touching each other.
-    '''
-    def _form_cells(self):
-        cells = []
 
-        for point_idx, region_idx in enumerate(self.vor.point_region):
-            cell = Cell(region_idx, self.vor.points[point_idx])
+    # def _form_cells(self):
+    #     cells = []
 
-            cells.append(cell)
+    #     for point_idx, region_idx in enumerate(self.vor.point_region):
+    #         cell = Cell(region_idx, self.vor.points[point_idx])
 
-        return cells
+    #         cells.append(cell)
+
+    #     return cells
 
     '''
     A boundary cell is a cell that extends beyond the edge of the world.
     '''
     def _label_boundary(self, cells):
         for cell in cells:
-            region = self.vor.regions[cell.region_idx]
+            region = self.get_region(cell.region_idx)
 
-            if -1 in region:
-                cell.is_boundary = True 
+            if region == []:
+                cell.is_boundary = True
             else:
-                coords = self.get_region_for_cell(cell.region_idx)
-
-                for x, y in coords:
+                for (x, y) in region:
                     if x > 1.0 or x < 0.0:
                         cell.is_boundary = True
                     if y > 1.0 or y < 0.0:
@@ -437,10 +528,10 @@ class World(object):
 
                 for _ in range(iterations):
                     if (random.random() < 0.8):
-                        avail = region.neighbors(neighbor.region_idx)
+                        avail = region.graph.neighbors(neighbor.region_idx)
 
                         if len(avail) > 0:
-                            neighbor = random.choice(avail)
+                            neighbor = self.get_cell( random.choice(avail) )
                             neighbor.type = Cell.Type.WATER
 
     def _terrainify(self, region):
@@ -471,63 +562,79 @@ class World(object):
     Find the shortest distance from the specified cell to water. Distance is defined
     as the lowest number of edges in the world graph that need to be traversed to 
     reach a water cell.
+
+    TODO: transition to using graph.distance()
     '''
     def __distance_from_water(self, cell, region):
         queue = collections.deque()
-        queue.append( (cell, 0) )
+        queue.append( (cell.region_idx, 0) )
 
         # Keep track of which cells have already been searched.
         added = set()
         added.add(cell.region_idx)
 
         while len(queue) > 0:
-            (cell, dist) = queue.popleft()
+            (idx, dist) = queue.popleft()
+            cell = self.get_cell(idx)
 
             if cell.type == Cell.Type.WATER:
                 return dist
 
-            for next_cell in region.neighbors(cell.region_idx):
-                if next_cell.region_idx not in added:
-                    queue.append( (next_cell, dist + 1) ) 
-                    added.add( next_cell.region_idx )
+            for next_idx in region.graph.neighbors(idx):
+                if next_idx not in added:
+                    queue.append( (next_idx, dist + 1) ) 
+                    added.add( next_idx )
 
-    '''
-    Get Cell by cell_id/region_id.
-    '''
-    def get_cell_by_id(self, cell_id):
-        for cell in self.cells:
-            if cell.region_idx == cell_id:
-                return cell
+    # '''
+    # Get Cell by cell_id/region_id.
+    # '''
+    # def get_cell_by_id(self, cell_id):
+    #     for cell in self.cells:
+    #         if cell.region_idx == cell_id:
+    #             return cell
         
-        return None
+    #     return None
     
-    '''
-    Get the polygon that defines the region for the specified cell_id/region_id.
-    Returns a list of 2D points, or an empty list if the region isn't defined within
-    the Voronoi diagram; see more about when this happens here:
+    # def get_cell(self, region_idx):
+    #     return self.celldict[region_idx]
 
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
-    '''
-    def get_region_for_cell(self, cell_id):
-        cell = self.get_cell_by_id(cell_id)
+    # def get_cells(self, region_idxs):
+    #     return list( map(lambda idx: self.celldict[idx], region_idxs) )
 
-        if -1 in self.vor.regions[cell.region_idx]:
-            return []
+    # '''
+    # Get the polygon that defines the region for the specified cell_id/region_id.
+    # Returns a list of 2D points, or an empty list if the region isn't defined within
+    # the Voronoi diagram; see more about when this happens here:
 
-        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[cell.region_idx]) )
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+    # '''
+    # def get_region(self, region_idx):
+    #     if -1 in self.vor.regions[region_idx]:
+    #         return []
 
-    '''
-    Fill the specified cell's region with the specified `color`. Supported colors are documented here:
-        https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.fill.html
-    '''
-    def paint_cell(self, cell_id, color):
-        region = self.get_region_for_cell(cell_id)
+    #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
 
-        x = list( map(lambda p: p[0], region) )
-        y = list( map(lambda p: p[1], region) )
-        plt.fill(x, y, color)
 
-    def render(self, cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False, heightmap=False):
+    # def get_region_for_cell(self, cell_id):
+    #     cell = self.get_cell_by_id(cell_id)
+
+    #     if -1 in self.vor.regions[cell.region_idx]:
+    #         return []
+
+    #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[cell.region_idx]) )
+
+    def render(self, cities=[], cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False, heightmap=False):
+        def paint_cell(cell_id, color):
+            '''
+            Fill the specified cell's region with the specified `color`. Supported colors are documented here:
+                https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.fill.html
+            '''
+            region = self.get_region(cell_id)
+
+            x = list( map(lambda p: p[0], region) )
+            y = list( map(lambda p: p[1], region) )
+            plt.fill(x, y, color)
+
         voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
         axes = plt.gca()
 
@@ -541,11 +648,11 @@ class World(object):
         if color_boundaries:
             for cell in self.cells:
                 if cell.type == Cell.Type.WATER:
-                    self.paint_cell(cell.region_idx, '#0485d1')
+                    paint_cell(cell.region_idx, '#0485d1')
                 if cell.type == Cell.Type.LAND:
-                    self.paint_cell(cell.region_idx, 'g')
+                    paint_cell(cell.region_idx, 'g')
                 if cell.type == Cell.Type.FIRE:
-                    self.paint_cell(cell.region_idx, 'red')
+                    paint_cell(cell.region_idx, 'red')
 
         if cell_elevation:
             color_sealevel = colour.Color('green')
@@ -559,7 +666,7 @@ class World(object):
                 #     self.paint_cell(cell.region_idx, '#0485d1')
                 if cell.type == Cell.Type.LAND:
                     color_idx = math.floor( cell.elevation / (1.0 / num_colors) )
-                    self.paint_cell(cell.region_idx, gradient[color_idx].hex)
+                    paint_cell(cell.region_idx, gradient[color_idx].hex)
 
         if tectonics:
             num_plates = len( set([c.plate_id for c in self.cells]) )
@@ -603,6 +710,10 @@ class World(object):
             grid = (255 * grid).astype('uint8')
             img = Image.fromarray(grid, mode='L')
             img.save('heightmap.png')
+
+        if len(cities) > 0:
+            for city in cities:
+                plt.plot(city.location[0], city.location[1], marker='o', markersize=3, color='red')
 
         plt.title('Rendered world')
 
