@@ -7,8 +7,10 @@ class RenderOptions(object):
 
     def __init__(self):
         self.CellColorMode = RenderOptions.CellColorMode.ELEVATION
-        self.scale_x = 600
-        self.scale_y = 400
+        self.scale_x = 1200
+        self.scale_y = 800
+
+        self.filename = 'world.png'
 
 def transform(point):
     return (point[0], 1.0 - point[1])
@@ -97,4 +99,4 @@ def render(world, cities, opts):
         for city in cities:
             draw_city(ctx, city)
 
-        surface.write_to_png('world-%s.png' % (world.id,))
+        surface.write_to_png(opts.filename)

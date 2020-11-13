@@ -5,8 +5,8 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 10000
-NumCities = 10
+PointCount = 2000
+NumCities = 2
 NumWorlds = 1
 
 if len(sys.argv) > 1:

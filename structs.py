@@ -166,10 +166,12 @@ class WorldRegion(AbstractCellGroup):
                         for neighbor in [n for n in self.get_cells( self.graph.neighbors(c.region_idx) ) if n.type == Cell.Type.LAND]:
                             neighbors.append(neighbor)
     
-                    lowest = lowest_cell(neighbors)
+                    # Its rare but possible that a cell won't have any LAND neighbors, which causes a crash without this check.
+                    if len(neighbors) > 0:
+                        lowest = lowest_cell(neighbors)
 
-                    lowest.type = Cell.Type.WATER
-                    pool.append(lowest)
+                        lowest.type = Cell.Type.WATER
+                        pool.append(lowest)
 
     '''
     Check whether the specified region is on the 'border' of the region. A cell is on the border if
