@@ -1,11 +1,12 @@
 import random, structs, numpy, datetime, sys, multiprocessing
-import voronoi, civilization, graph
+import voronoi, civilization, graph, renderer
 
 seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 2000
+PointCount = 10000
+NumCities = 10
 NumWorlds = 1
 
 if len(sys.argv) > 1:
@@ -23,31 +24,35 @@ def generate(world_idx):
 
     world = structs.World(cells, vor, worldgraph)
 
-    print('  Generating world #%d [%s]...' % (world_idx + 1, world.id,))
+    print('  [%s] Generating world #%d...' % (world.id, world_idx + 1))
 
     world.build()
     world.label()
 
-    print('  Establishing civilization [%s]...' % (world_idx,))
+    print('  [%s] Establishing civilization...' % (world.id,))
 
     cities = []
-    # for _ in range(5):
-    #     city = civilization.PlaceCity(world, cities)
+    for _ in range(NumCities):
+        city = civilization.PlaceCity(world, cities)
 
-    #     print(city.location)
-    #     cities.append(city)
+        cities.append(city)
 
     ## Render
-    world.render(
-        cities=cities,
-        cell_labels=False, 
-        color_boundaries=True, 
-        cell_elevation=True, 
-        show_graph=False, 
-        tectonics=False,
-        outline_landforms=True,
-        heightmap=True
-    )
+    print('  [%s] Rendering world...' % (world.id,))
+
+    render_opts = renderer.RenderOptions()
+
+    renderer.render(world, cities, render_opts)
+    # world.render(
+    #     cities=cities,
+    #     cell_labels=False, 
+    #     color_boundaries=True, 
+    #     cell_elevation=True, 
+    #     show_graph=False, 
+    #     tectonics=False,
+    #     outline_landforms=True,
+    #     heightmap=True
+    # )
 
 if __name__ == '__main__':
     print('seed=%d, num_points=%d' % (seed, PointCount))

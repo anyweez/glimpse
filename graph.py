@@ -48,7 +48,7 @@ class Graph(object):
 
         return by_distance[dist - 1]
 
-    def distance(self, region_idx, traverse_func, dest_func):
+    def distance(self, region_idx, traverse_func, dest_func, max_distance=None):
         '''
         Find path from region_idx to a node that satisfies `dest_func`, traveling
         only through nodes that satisfy `traverse_func`. Return the destination idx
@@ -67,11 +67,18 @@ class Graph(object):
 
             if dest_func(idx):
                 return (idx, dist)
+
+            # If no valid destination is discovered by taking `max_distance` steps
+            # then stop looking.
+            if max_distance and dist > max_distance:
+                return (None, max_distance)
             
             for next_idx in traverse_func(idx, self.directed_edgedict[idx], {}):
                 if next_idx not in added:
                     queue.append( (next_idx, dist + 1) )
                     added.add(next_idx)
+        
+        return (None, -1)
 
 
 def BuildGraph(cells, vor):

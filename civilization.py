@@ -11,54 +11,46 @@ class City(object):
 def PlaceCity(world, existing_cities):
     existing_cells = set( map(lambda city: city.cell.region_idx, existing_cities) )
 
-    def survivability(cell):
-        if cell.type == Cell.Type.WATER:
+    def survivability(idx): 
+        if world.get_cell(idx).type == Cell.Type.WATER:
             return -1000.0
 
         return 0.0
 
-    def economy(cell):
+    def economy(idx):
         # Can travel over and land cell
         def travel(source_idx, dest_idxs, context):
-            cells = world.get_cells(dest_idxs)
-
-            return list( filter(lambda cell: cell.type == Cell.Type.LAND, cells) )
+            return [c.region_idx for c in world.get_cells(dest_idxs) if c.type == Cell.Type.LAND]
 
         # Destination is a water cell
         def water(dest_idx):
-            return world.get_cell_by_id(dest_idx).type == Cell.Type.WATER
+            return world.get_cell(dest_idx).type == Cell.Type.WATER
 
-        dist = world.graph.distance(cell, travel, water)
+        (_, dist) = world.graph.distance(idx, travel, water, max_distance=5)
 
         return max(5 - dist, 0) * 10.0
 
-    def threat(cell):
-        # If a city already exists in this cell, threat level is high
-        # if len( list(filter(lambda city: city.cell.region_idx == cell.region_idx, existing_cities)) ) > 0:
-        #     print('Threat factor high for city #%d' % (len(existing_cities) + 1))
-        #     return 100.0
-
-        def travel(source_idx, dest_idxs, context):
-            pass
+    def threat(idx):
+        # Any land cell is eligible for travel
+        def travel(source_idx, next_idxs, context):
+            return [c.region_idx for c in world.get_cells(next_idxs) if c.type == Cell.Type.LAND]
 
         def other_city(dest_idx):
             return dest_idx in existing_cells
 
         # Find the distance to the nearest city. The closer, the more dangerous.
-        dist = world.graph.distance(cell, travel, other_city, max_distance=50)
+        (_, dist) = world.graph.distance(idx, travel, other_city, max_distance=20)
 
-        return max(0.0, 100.0 - (dist * 2.0))
+        return max(0.0, 100.0 - (dist * 5.0))
 
     top_cell = None
     top_score = -1000000
 
-    print('testing %d cells...' % (len(world.cells, )))
-
-    for cell in world.cells:
-        score = survivability(cell) + economy(cell) - threat(cell)
+    for c in world.cells:
+        score = survivability(c.region_idx) + economy(c.region_idx) - threat(c.region_idx)
 
         if score > top_score:
-            top_cell = cell
+            top_cell = c
             top_score = score
 
     return City(top_cell)

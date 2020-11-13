@@ -86,6 +86,9 @@ class AbstractCellGroup(object):
         return self.vor.regions[region_idx]
 
     def get_cell(self, region_idx):
+        if isinstance(region_idx, Cell):
+            raise Exception('Provide a region_idx, not a Cell')
+
         if region_idx not in self.available_cells:
             raise errors.InvalidCellError('Requested non-existant or out of scope cell #%d' % (region_idx,))
 
@@ -492,8 +495,6 @@ class World(AbstractCellGroup):
             gradient = list( color_sealevel.range_to(color_peak, num_colors) )
 
             for cell in self.cells:
-                # if cell.type == Cell.Type.WATER:
-                #     self.paint_cell(cell.region_idx, '#0485d1')
                 if cell.type == Cell.Type.LAND:
                     color_idx = math.floor( cell.elevation / (1.0 / num_colors) )
                     paint_cell(cell.region_idx, gradient[color_idx].hex)
@@ -547,5 +548,6 @@ class World(AbstractCellGroup):
 
         plt.title('Rendered world')
 
-        plt.savefig('world-%s.png' % (self.id,))
+        plt.savefig('world.png')
+        # plt.savefig('world-%s.png' % (self.id,))
         # plt.show()
