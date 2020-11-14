@@ -66,6 +66,9 @@ class AbstractCellGroup(object):
                 
                 self.vertex_count[idx] += 1
 
+    def contains(self, region_idx):
+        return region_idx in self.available_cells
+
     def get_region(self, region_idx):
         '''
         Get the polygon that defines the region for the specified cell_id/region_id.
@@ -187,28 +190,6 @@ class WorldRegion(AbstractCellGroup):
         
         return False
 
-    # TODO: use graph?
-    def floodfill(self, region_idx, predicate):
-        try:
-            cells = [self.get_cell(region_idx), ]
-
-            queue = collections.deque([self.get_cell(region_idx),])
-            added = set([region_idx,])
-
-            while len(queue) > 0:
-                next_cell = queue.popleft()
-
-                for cell in self.get_cells( self.graph.neighbors(next_cell.region_idx) ):
-                    if predicate(cell) and cell.region_idx not in added:
-                        cells.append(cell)
-                        queue.append(cell)
-                        added.add(cell.region_idx)
-
-            return cells
-        except errors.InvalidCellError as e:
-            raise e
-
-
 class Landform(AbstractCellGroup):
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
@@ -318,10 +299,10 @@ class World(AbstractCellGroup):
             # if the cell is not yet part of a continent
             if len( list(filter(lambda con: con.contains(cell.region_idx), self.continents)) ) == 0:
                 # Flood fill across Land cells to generate the full continent
-                continent_cells = wr.floodfill(cell.region_idx, lambda c: c.type == Cell.Type.LAND)
+                cell_idxs = wr.graph.floodfill(cell.region_idx, lambda c: self.get_cell(c).type == Cell.Type.LAND)
 
                 # Create a Landform and add it to the continent list
-                self.continents.append( Landform(continent_cells, self.vor, self.graph) )
+                self.continents.append( Landform(self.get_cells(cell_idxs), self.vor, self.graph) )
 
     def _form_plates(self, region):
         plate_centers = random.choices(region.cells, k=3)

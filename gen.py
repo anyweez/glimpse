@@ -1,5 +1,5 @@
 import random, structs, numpy, datetime, sys, multiprocessing
-import voronoi, civilization, graph, renderer
+import voronoi, civilization, graph, renderer, forest
 
 seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
@@ -8,6 +8,7 @@ random.seed(seed)
 PointCount = 2000
 NumCities = 2
 NumWorlds = 1
+NumForests = 20
 
 if len(sys.argv) > 1:
     NumWorlds = int(sys.argv[1])
@@ -36,13 +37,26 @@ def generate(world_idx):
         city = civilization.PlaceCity(world, cities)
 
         cities.append(city)
+    
+    print('  [%s] Growing forests...' % (world.id,))
+
+    forests = []
+    for _ in range(NumForests):
+        f = forest.PlaceForest(world, forests)
+
+        forests.append(f)
 
     ## Render
     print('  [%s] Rendering world...' % (world.id,))
 
     render_opts = renderer.RenderOptions()
 
-    renderer.render(world, cities, render_opts)
+    renderer.render(
+        world, 
+        cities=cities, 
+        forests=forests,
+        opts=render_opts,
+    )
     # world.render(
     #     cities=cities,
     #     cell_labels=False, 

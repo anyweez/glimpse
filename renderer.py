@@ -1,4 +1,4 @@
-import enum, cairo, colour, math
+import enum, cairo, colour, math, random
 
 from structs import Cell
 
@@ -14,6 +14,9 @@ class RenderOptions(object):
 
 def transform(point):
     return (point[0], 1.0 - point[1])
+
+def rgb(r, g, b):
+    return (r / 255.0, g / 255.0, b / 255.0)
 
 def draw_region(ctx, points, fill_color):
     if len(points) == 0:
@@ -54,7 +57,27 @@ def draw_city(ctx, city):
 
     ctx.stroke()
 
-def render(world, cities, opts):
+def draw_tree(ctx, point):
+    tree_height = 0.015
+    top = transform(point)
+
+    top = (top[0], top[1] - tree_height)
+
+    # Build the triangle
+    ctx.set_source_rgb(*rgb(46, 74, 19))
+    
+    bottom_left = (top[0] - (tree_height / 2.5), 1 - (top[1] + tree_height))
+    bottom_right = (top[0] + (tree_height / 2.5), 1 - (top[1] + tree_height))
+
+    ctx.move_to(*top)
+    ctx.line_to(*transform(bottom_left))
+    ctx.line_to(*transform(bottom_right))
+    ctx.close_path()
+
+    ctx.fill()
+
+
+def render(world, cities=[], forests=[], opts=RenderOptions()):
     # with cairo.SVGSurface('world.svg', image_scale, image_scale) as surface:
     with cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y) as surface:
         ctx = cairo.Context(surface)
@@ -73,18 +96,40 @@ def render(world, cities, opts):
 
         for cell in world.cells:
             if cell.type == Cell.Type.LAND:
-                color_idx = math.floor( cell.elevation / (1.0 / num_colors) )
+                color_idx = math.floor( cell.elevation * num_colors )
 
                 region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
                 draw_region(ctx, region, gradient[color_idx].rgb)
             
             if cell.type == Cell.Type.WATER:
-                # water color: https://www.color-hex.com/color/0485d1
-                color = (0.0157, 0.5216, 0.820)
+                def land(idx):
+                    return world.get_cell(idx).type == Cell.Type.LAND
+
+                (_, dist) = world.graph.distance(cell.region_idx, lambda _, idxs, __: idxs, land, max_distance=10)
 
                 region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
-                draw_region(ctx, region, color)
+
+                if dist < 4:
+                    draw_region(ctx, region, rgb(1, 133, 209))
+                elif dist < 8 and random.random() < 0.5:
+                    draw_region(ctx, region, rgb(1, 133, 209))
+                else:
+                    draw_region(ctx, region, rgb(3, 119, 188))
         
+        ## Draw forests
+        for f in forests:
+            for cell in f.cells:
+                region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
+
+                # draw_region(ctx, region, rgb(255, 0, 0))
+
+                if random.random() < 0.33:
+                    draw_tree(ctx, cell.location)
+
+        ## Draw cities
+        for city in cities:
+            draw_city(ctx, city)
+
         ## Draw landform outlines
         for continent in world.continents:
             outlines = continent.outline()
@@ -94,9 +139,5 @@ def render(world, cities, opts):
                 end = transform(outline[1])
 
                 draw_outline(ctx, start, end)
-
-        ## Draw cities
-        for city in cities:
-            draw_city(ctx, city)
 
         surface.write_to_png(opts.filename)

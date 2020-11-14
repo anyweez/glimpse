@@ -80,6 +80,27 @@ class Graph(object):
         
         return (None, -1)
 
+    def floodfill(self, region_idx, fill_func):
+        '''
+        Expand in all directions from `region_idx` as long as new cells satisfy
+        the `fill_func`.
+        '''
+        cells = [region_idx, ]
+
+        queue = collections.deque([region_idx,])
+        added = set([region_idx,])
+
+        while len(queue) > 0:
+            next_idx = queue.popleft()
+
+            for neighbor_idx in self.neighbors(next_idx):
+                if fill_func(neighbor_idx) and neighbor_idx not in added:
+                    cells.append(neighbor_idx)
+                    queue.append(neighbor_idx)
+
+                    added.add(neighbor_idx)
+
+        return cells
 
 def BuildGraph(cells, vor):
     '''
