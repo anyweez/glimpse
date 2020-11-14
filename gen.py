@@ -6,7 +6,7 @@ random.seed(seed)
 
 # Configuration variables
 PointCount = 2000
-NumCities = 2
+NumCities = 10
 NumWorlds = 1
 NumForests = 20
 

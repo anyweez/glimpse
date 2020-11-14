@@ -10,13 +10,26 @@ class Graph(object):
             
             if dest not in self.directed_edgedict[src]:
                 self.directed_edgedict[src].append(dest)
+    
+    def node_count(self):
+        nodes = set()
+
+        for k, v in self.directed_edgedict.items():
+            nodes.add(k)
+            nodes.update(v)
         
+        return len(nodes)
+
+    def edge_count(self):
+        return sum([len(v) for v in self.directed_edgedict.values()])
+
     def neighbors(self, region_idx, dist=1):
         '''
         Find all neighbors @ distance `dist` for the specified node.
         '''
         if region_idx not in self.directed_edgedict:
-            raise errors.InvalidCellError('Cell does not exist in region')
+            return []
+            # raise errors.InvalidCellError('Cell #%d does not exist in region' % (region_idx,))
 
         # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
         # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
@@ -65,15 +78,15 @@ class Graph(object):
         while len(queue) > 0:
             (idx, dist) = queue.popleft()
 
-            if dest_func(idx):
-                return (idx, dist)
-
             # If no valid destination is discovered by taking `max_distance` steps
             # then stop looking.
             if max_distance and dist > max_distance:
-                return (None, max_distance)
-            
-            for next_idx in traverse_func(idx, self.directed_edgedict[idx], {}):
+                return (None, -1)
+
+            if dest_func(idx):
+                return (idx, dist)
+
+            for next_idx in traverse_func(idx, self.neighbors(idx), {}):
                 if next_idx not in added:
                     queue.append( (next_idx, dist + 1) )
                     added.add(next_idx)
