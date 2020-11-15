@@ -54,9 +54,9 @@ def _checkForMountain(region_idx, world, existing_mountains):
     Check to see if the specified cell is part of a mountain. If so, return a MOUNTAIN
     PointOfInterest. If not, return None.
     '''
-    MountainMinSize = 10
+    MountainMinSize = 8
     MountainMaxSize = 30
-    MountainMinHeight = 0.5
+    MountainMinHeight = 0.6
 
     # A mountain is land with elevation > MountainMinHeight
     def is_mountain(idx):
@@ -87,11 +87,6 @@ def _already_detected(region_idx, existing):
     whether its part of a lake.
     '''
     return len([item for item in existing if item.contains(region_idx)]) > 0
-    # for poi in existing:
-    #     if poi.contains(region_idx):
-    #         return True
-    # 
-    # return False
 
 def DetectAll(world):
     '''
@@ -117,9 +112,6 @@ def DetectAll(world):
 
                 if next_poi is not None:
                     pois[poi_type].append(next_poi)
-
-                    if poi_type == PointOfInterest.Type.MOUNTAIN:
-                        print([c.region_idx for c in next_poi.cells])
 
     library = PointOfInterestLibrary(pois)
 

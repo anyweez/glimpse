@@ -134,22 +134,24 @@ class WorldRegion(AbstractCellGroup):
         # bowl, increase water depth by one.
         for current_cell in [c for c in self.cells if c.type == Cell.Type.LAND]:
             neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
-            next_cell = lowest_cell(neighbors)
 
-            # Keep flowing while 
-            while next_cell.elevation < current_cell.elevation:
-                current_cell = next_cell
-
-                neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
+            if len(neighbors) > 0:
                 next_cell = lowest_cell(neighbors)
 
-                # If we've hit a cell that's already water, finish.
-                if next_cell.type == Cell.Type.WATER:
-                    break
-            
-            # If we ended on land, increase water depth.
-            if next_cell.type == Cell.Type.LAND:
-                water_depth[next_cell.region_idx] += 1
+                # Keep flowing while 
+                while next_cell.elevation < current_cell.elevation:
+                    current_cell = next_cell
+
+                    neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
+                    next_cell = lowest_cell(neighbors)
+
+                    # If we've hit a cell that's already water, finish.
+                    if next_cell.type == Cell.Type.WATER:
+                        break
+                
+                # If we ended on land, increase water depth.
+                if next_cell.type == Cell.Type.LAND:
+                    water_depth[next_cell.region_idx] += 1
 
         # Convert cells to water if enough water has pooled up. If the pool is big enough, start
         # filling up surrounding cells as well.
