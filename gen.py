@@ -1,14 +1,14 @@
 import random, structs, numpy, datetime, sys, multiprocessing
-import voronoi, civilization, graph, renderer, forest
+import voronoi, civilization, graph, renderer, forest, poi
 
 seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
 PointCount = 2000
-NumCities = 10
+NumCities = 2
 NumWorlds = 1
-NumForests = 20
+NumForests = 14
 
 if len(sys.argv) > 1:
     NumWorlds = int(sys.argv[1])
@@ -46,6 +46,10 @@ def generate(world_idx):
 
         forests.append(f)
 
+    ## Find points of interest
+    print('  [%s] Identifying points of interest...' % (world.id,))
+    poi_lib = poi.DetectAll(world)
+
     ## Render
     print('  [%s] Rendering world...' % (world.id,))
 
@@ -55,8 +59,21 @@ def generate(world_idx):
         world, 
         cities=cities, 
         forests=forests,
+        # poi_lib=poi_lib,
         opts=render_opts,
     )
+
+    render_opts_poi = renderer.RenderOptions()
+    render_opts_poi.filename = 'world_poi.png'
+
+    renderer.render(
+        world, 
+        cities=cities, 
+        forests=forests,
+        poi_lib=poi_lib,
+        opts=render_opts_poi,
+    )
+
     # world.render(
     #     cities=cities,
     #     cell_labels=False, 
@@ -72,5 +89,6 @@ if __name__ == '__main__':
     print('seed=%d, num_points=%d' % (seed, PointCount))
     print('Generating %d world(s)...' % (NumWorlds,))
 
-    with multiprocessing.Pool() as pool:
-        pool.map(generate, range(NumWorlds))
+    generate(0)
+    # with multiprocessing.Pool() as pool:
+    #     pool.map(generate, range(NumWorlds))

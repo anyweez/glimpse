@@ -8,8 +8,14 @@ class Graph(object):
             if src not in self.directed_edgedict:
                 self.directed_edgedict[src] = []
             
+            # if dest not in self.directed_edgedict:
+            #     self.directed_edgedict[dest] = []
+            
             if dest not in self.directed_edgedict[src]:
                 self.directed_edgedict[src].append(dest)
+
+            # if src not in self.directed_edgedict[dest]:
+            #     self.directed_edgedict[dest].append(src)
     
     def node_count(self):
         nodes = set()
@@ -108,10 +114,10 @@ class Graph(object):
 
             for neighbor_idx in self.neighbors(next_idx):
                 if fill_func(neighbor_idx) and neighbor_idx not in added:
-                    cells.append(neighbor_idx)
-                    queue.append(neighbor_idx)
+                    cells.append(neighbor_idx)  # Store this cell as part of the resulting set
+                    queue.append(neighbor_idx)  # Continue flood to this cell's neighbors
 
-                    added.add(neighbor_idx)
+                    added.add(neighbor_idx)     # Ensure we don't revisit this cell later
 
         return cells
 

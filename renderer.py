@@ -77,7 +77,7 @@ def draw_tree(ctx, point):
     ctx.fill()
 
 
-def render(world, cities=[], forests=[], opts=RenderOptions()):
+def render(world, cities=[], forests=[], poi_lib=None, opts=RenderOptions()):
     # with cairo.SVGSurface('world.svg', image_scale, image_scale) as surface:
     with cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y) as surface:
         ctx = cairo.Context(surface)
@@ -126,9 +126,17 @@ def render(world, cities=[], forests=[], opts=RenderOptions()):
                 if random.random() < 0.33:
                     draw_tree(ctx, cell.location)
 
-        ## Draw cities
-        for city in cities:
-            draw_city(ctx, city)
+        ## Highlight points of interest
+        if poi_lib is not None:
+            for poi_type in poi_lib.list_types():
+                # For each point of interest....
+                for poi in poi_lib.get_type(poi_type):
+                    colors = [rgb(255, 255, 0), rgb(0, 255, 255), rgb(255, 0, 255), rgb(128, 0, 255)]
+                    color = random.choice(colors)
+
+                    for cell in poi.cells:
+                        region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
+                        draw_region(ctx, region, color)
 
         ## Draw landform outlines
         for continent in world.continents:
@@ -139,5 +147,9 @@ def render(world, cities=[], forests=[], opts=RenderOptions()):
                 end = transform(outline[1])
 
                 draw_outline(ctx, start, end)
+
+        ## Draw cities
+        for city in cities:
+            draw_city(ctx, city)
 
         surface.write_to_png(opts.filename)
