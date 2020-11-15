@@ -89,6 +89,10 @@ if __name__ == '__main__':
     print('seed=%d, num_points=%d' % (seed, PointCount))
     print('Generating %d world(s)...' % (NumWorlds,))
 
-    generate(0)
-    # with multiprocessing.Pool() as pool:
-    #     pool.map(generate, range(NumWorlds))
+    # generate(0)
+    with multiprocessing.Pool() as pool:
+        for idx in range(NumWorlds):
+            pool.apply_async(generate, args=(idx,))
+        
+        pool.close()
+        pool.join()
