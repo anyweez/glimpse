@@ -24,6 +24,9 @@ class Culture(structs.AbstractCellGroup):
         if random.random() < 0.25:
             return '%s Harbor' % (self.lang.generate_name(),)
         
+        if random.random() < 0.35:
+            return 'New %s' % (self.lang.generate_name(),)
+        
         return self.lang.generate_name()
 
     def _name_poi(self, poi):
