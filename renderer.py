@@ -1,5 +1,6 @@
-import enum, cairo, colour, math, random
+import enum, cairo, colour, math, random, json
 
+import xml.etree.ElementTree as ET
 from structs import Cell
 
 class RenderOptions(object):
@@ -77,9 +78,25 @@ def draw_tree(ctx, point):
     ctx.fill()
 
 
-def render(world, cities=[], forests=[], poi_lib=None, opts=RenderOptions()):
-    # with cairo.SVGSurface('world.svg', image_scale, image_scale) as surface:
-    with cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y) as surface:
+
+def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOptions()):
+    def create_surface(fmt):
+        if fmt == 'png':
+            return cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y)
+        
+        if fmt == 'svg':
+            return cairo.SVGSurface(opts.filename, opts.scale_x, opts.scale_y)
+
+        return Exception('Unknown image type requested: %s' % (fmt,))
+
+    def close_surface(format, cairo_surface):
+        if format == 'png':
+            surface.write_to_png(opts.filename)
+    
+
+    output_fmt = opts.filename[-3:]
+
+    with create_surface(output_fmt) as surface:
         ctx = cairo.Context(surface)
         ctx.scale(opts.scale_x, opts.scale_y)
 
@@ -152,4 +169,30 @@ def render(world, cities=[], forests=[], poi_lib=None, opts=RenderOptions()):
         for city in cities:
             draw_city(ctx, city)
 
-        surface.write_to_png(opts.filename)
+        close_surface(output_fmt, surface)
+
+    ## Make some manual modifications to the svg file (if svg). Importantly this code is running
+    ## outside of the `with` statement above to ensure the file's already been written to disk.
+    if output_fmt == 'svg':
+        ET.register_namespace('', 'http://www.w3.org/2000/svg')
+
+        doc = ET.parse(opts.filename)
+
+        # Remove width and height attributes that mess with web rendering
+        doc.getroot().attrib.pop('width')
+        doc.getroot().attrib.pop('height')
+
+        # Add city hover regions
+        for city in cities:
+            city_el = ET.Element('circle')
+            
+            city_el.set('r', '20')
+            city_el.set('cx', str(city.location[0] * opts.scale_x))
+            city_el.set('cy', str(opts.scale_y - (city.location[1] * opts.scale_y)))
+
+            city_el.set('class', 'city')
+            city_el.set('details', '{ "name": "%s" }' % (names[city],))
+
+            doc.getroot().append(city_el)
+
+        doc.write(opts.filename)
