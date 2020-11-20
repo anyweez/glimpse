@@ -6,7 +6,7 @@ random.seed(seed)
 
 # Configuration variables
 PointCount = 2000
-NumCities = 8
+NumCities = 2
 NumWorlds = 1
 NumForests = 14
 
@@ -79,6 +79,7 @@ def generate(world_idx, language_list):
     # Render map with POIs highlighted
     render_opts_poi = renderer.RenderOptions()
     render_opts_poi.filename = 'world_poi.png'
+    render_opts_poi.highlight_poi = True
 
     renderer.render(
         world, 
@@ -97,7 +98,7 @@ def generate(world_idx, language_list):
         cities=cities, 
         forests=forests,
         names=names,
-        # poi_lib=poi_lib,
+        poi_lib=poi_lib,
         opts=render_opts_svg,
     )
 

@@ -12,6 +12,7 @@ class RenderOptions(object):
         self.scale_y = 800
 
         self.filename = 'world.png'
+        self.highlight_poi = False
 
 def transform(point):
     return (point[0], 1.0 - point[1])
@@ -144,7 +145,7 @@ def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOpti
                     draw_tree(ctx, cell.location)
 
         ## Highlight points of interest
-        if poi_lib is not None:
+        if poi_lib is not None and opts.highlight_poi:
             for poi_type in poi_lib.list_types():
                 # For each point of interest....
                 for poi in poi_lib.get_type(poi_type):
@@ -194,5 +195,42 @@ def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOpti
             city_el.set('details', '{ "name": "%s" }' % (names[city],))
 
             doc.getroot().append(city_el)
+
+        if poi_lib:
+            def map_region_pt(pt):
+                x = str(transform(pt)[0] * opts.scale_x)
+                y = str(transform(pt)[1] * opts.scale_y)
+
+                return ','.join((x, y))
+
+            for poi_type in poi_lib.list_types():
+                # Create a SVG group for each POI.
+                for poi in poi_lib.get_type(poi_type):
+                    poi_group_el = ET.Element('g')
+                    poi_group_el.set('class', str(poi_type).split('.')[1].lower())
+                    poi_group_el.set('details',  '{ "name": "%s" }' % (names[poi],))
+                    
+
+                    # Add all cells to this <g>
+                    for cell in poi.cells:
+                        poi_el = ET.Element('polygon')
+
+                        region = list( map(map_region_pt, world.get_region(cell.region_idx)) )
+                        # draw_region(ctx, region, color))
+                        poi_el.set('points', ' '.join(region))
+
+                        poi_group_el.append(poi_el)
+                    
+                    doc.getroot().append(poi_group_el)
+                    # out_region = []
+
+                    # for point in poi.outline():
+                    #     out_region.append(','.join( (str(point[0] * opts.scale_x), str((1.0 - point[1]) * opts.scale_y)) ))
+
+                    # # poi_el.set('points', ' '.join(out_region))
+                    # # poi_el.set('class', str(poi_type).split('.')[1].lower()) # PoiType.LAKE => LAKE
+                    # # poi_el.set('details', '{ "name": "%s" }' % (names[poi],))
+
+                    # doc.getroot().append(poi_el)
 
         doc.write(opts.filename)

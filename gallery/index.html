@@ -9,8 +9,8 @@
         <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="/static/style.css">
 
-        <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script> -->
-        <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+        <!-- <script src="https://cdn.jsdelivr.net/npm/vue@2"></script> -->
     </head>
     <body>
         <div id="app">
@@ -21,20 +21,20 @@
 
                 <!-- Display the details pane -->
                 <div class="details" v-if="world_id">
-                    <h2 @click="() => highlight()">World ID: {{ world_id }}</h2>
+                    <h2 @click="() => unhighlight_all()">World ID: {{ world_id }}</h2>
 
                     <ul>
                         <li>Cities</li>
                         <ul>
-                            <li v-for="city in cities" @click="() => highlight(city)">{{ city.name }}</li>
+                            <li v-for="city in cities" @click="() => highlight(city, 'city')">{{ city.name }}</li>
                         </ul>
                         <li>Lakes</li>
                         <ul>
-                            <li v-for="lake in lakes">{{ lake.name }}</li>
+                            <li v-for="lake in lakes" @click="() => highlight(lake, 'lake')">{{ lake.name }}</li>
                         </ul>
                         <li>Mountains</li>
                         <ul>
-                            <li v-for="mountain in mountains">{{ mountain.name }}</li>
+                            <li v-for="mountain in mountains" @click="() => highlight(mountain, 'mountain')">{{ mountain.name }}</li>
                         </ul>
                     </ul>
                 </div>

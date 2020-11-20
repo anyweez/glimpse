@@ -54,3 +54,15 @@ svg .city.show {
 svg .city:hover {
     opacity: 0.8;
 }
+
+svg .lake, svg .mountain {
+    fill: orange;
+    stroke: black;
+    stroke-width: 0;
+
+    opacity: 0.0;
+}
+
+svg .lake.show, svg .mountain.show {
+    opacity: 0.8;
+}

@@ -60,9 +60,9 @@ const app = new Vue({
             this.get_map();
         },
 
-        highlight(poi={}) {
+        highlight(poi={}, type) {
             // Highlight cities
-            return [...this.$refs.map.querySelectorAll('.city')].forEach(el => {
+            return [...this.$refs.map.querySelectorAll(`.${type}`)].forEach(el => {
                 const details = JSON.parse( el.getAttribute('details') );
 
                 if (poi.name && (details.name === poi.name)) {
@@ -72,6 +72,12 @@ const app = new Vue({
                 }
             });
         },
+
+        unhighlight_all() {
+            document.querySelectorAll('.city').forEach(c => c.classList.remove('show'));
+            document.querySelectorAll('.lake').forEach(c => c.classList.remove('show'));
+            document.querySelectorAll('.mountain').forEach(c => c.classList.remove('show'));
+        }
     },
 
     computed: {
@@ -83,11 +89,17 @@ const app = new Vue({
         },
 
         lakes() {
-            return [];
+            if (this.world_id === null) return [];
+
+            return [...this.map_svg_parsed.querySelectorAll('.lake')]
+                .map(lake => JSON.parse(lake.getAttribute('details')));
         },
 
         mountains() {
-            return [];
+            if (this.world_id === null) return [];
+
+            return [...this.map_svg_parsed.querySelectorAll('.mountain')]
+                .map(lake => JSON.parse(lake.getAttribute('details')));
         },
     },
 });

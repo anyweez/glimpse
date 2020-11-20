@@ -108,7 +108,56 @@ class AbstractCellGroup(object):
         # bugs, though.
         return [self.available_cells[idx] for idx in region_idxs if idx in self.available_cells]
 
+    def outline(self):
+        ridges = []
 
+        '''
+        get all allowed regions
+        for all ridge vertices
+            check if ridge is in exactly one region
+        '''
+        supported_regions = list( map(lambda cell: self.vor.regions[cell.region_idx], self.cells) )
+
+        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
+
+        for ridge in self.vor.ridge_vertices:
+            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
+                ridges.append(ridge)
+
+        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
+
+    def polygon(self):
+        print('polygon <start>')
+        outline = self.outline()
+
+        points = {}
+        polygon = []
+
+        for (src, dest) in outline:
+            src = (float(src[0]), float(src[1]))
+            dest = (float(dest[0]), float(dest[1]))
+
+            points[src] = dest
+
+        src = tuple( map(lambda dim: float(dim), outline[0][0]) )
+        dest = tuple( map(lambda dim: float(dim), outline[0][1]) )
+
+        polygon.append(src)
+        print('  > adding %s' % (src,))
+        polygon.append(dest)
+        print('  > adding %s' % (dest,))
+
+        while dest in points:
+            print('  > adding %s' % (points[dest],))
+            polygon.append(points[dest])
+
+            dest = points[dest]
+        
+        print(points)
+        print(polygon)
+
+        print('polygon <end>')
+        return polygon
 
 class WorldRegion(AbstractCellGroup):
     def __init__(self, cells, vor, graph):  
@@ -202,25 +251,6 @@ class Landform(AbstractCellGroup):
             return self.get_cell(region_idx)
         except errors.InvalidCellError:
             return False
-
-    def outline(self):
-        ridges = []
-
-        '''
-        get all allowed regions
-        for all ridge vertices
-            check if ridge is in exactly one region
-        '''
-        supported_regions = list( map(lambda cell: self.vor.regions[cell.region_idx], self.cells) )
-
-        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
-
-        for ridge in self.vor.ridge_vertices:
-            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
-                ridges.append(ridge)
-
-        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
-
 
 class World(AbstractCellGroup):
     '''

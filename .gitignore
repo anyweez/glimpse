@@ -3,6 +3,6 @@ __pycache__
 .DS_Store
 .vscode
 
-gallery/
+gallery/maps
 world-*.png
 heightmap.png
