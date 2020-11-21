@@ -6,7 +6,7 @@ random.seed(seed)
 
 # Configuration variables
 PointCount = 2000
-NumCities = 2
+NumCities = 4
 NumWorlds = 1
 NumForests = 14
 
@@ -91,7 +91,7 @@ def generate(world_idx, language_list):
 
     # Render SVG
     render_opts_svg = renderer.RenderOptions()
-    render_opts_svg.filename = 'world-%s.svg' % (world.id,)
+    render_opts_svg.filename = 'gallery/maps/world-%s.svg' % (world.id,)
 
     renderer.render(
         world, 

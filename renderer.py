@@ -43,7 +43,7 @@ def draw_outline(ctx, start_pt, end_pt):
     ctx.line_to(*end_pt)
 
     ctx.set_source_rgb(0.0, 0.0, 0.0)
-    ctx.set_line_width(0.004)
+    ctx.set_line_width(0.003)
     ctx.stroke()
 
 def draw_city(ctx, city):
