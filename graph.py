@@ -1,67 +1,73 @@
-import errors, collections
+import collections, igraph
+import errors
 
 class Graph(object):
     def __init__(self, edges):
-        self.directed_edgedict = {}
+        self.ig = igraph.Graph()
 
+        # Count number of vertices
+        region_idxs = set()
         for (src, dest) in edges:
-            if src not in self.directed_edgedict:
-                self.directed_edgedict[src] = []
-            
-            if dest not in self.directed_edgedict[src]:
-                self.directed_edgedict[src].append(dest)
+            region_idxs.add(src)
+            region_idxs.add(dest)
+
+        if len(region_idxs) == 0:
+            return
+
+        self.ig.add_vertices(max(region_idxs) + 1)
+        self.ig.add_edges(edges)
+
+    def subgraph(self, edge_filter):
+        edges = filter(edge_filter, self.edges())
+
+        return Graph( list(edges) )
 
     def node_count(self):
-        nodes = set()
-
-        for k, v in self.directed_edgedict.items():
-            nodes.add(k)
-            nodes.update(v)
-        
-        return len(nodes)
+        '''
+        Return the number of nodes in the graph. This may be one (1) higher than expected
+        because of how we build the graph.
+        '''
+        return self.ig.vcount()
 
     def edge_count(self):
-        return sum([len(v) for v in self.directed_edgedict.values()])
+        '''
+        Return the number of edges in the graph.
+        '''
+        return self.ig.ecount()
+
+    def nodes(self):
+        '''
+        Return a list containing all region_idxs represented in the graph. A node will only
+        exist in the graph if there's at least one inbound or outbound edge.
+        '''
+        return self.ig.vs.indices
 
     def edges(self):
-        for src in self.directed_edgedict.keys():
-            for dest in self.directed_edgedict[src]:
-                yield (src, dest)
+        '''
+        Generator that iterates over all edges in the graph.
+        '''
+        for edge in self.ig.get_edgelist():
+            yield edge
 
     def neighbors(self, region_idx, dist=1):
         '''
         Find all neighbors @ distance `dist` for the specified node.
         '''
-        if region_idx not in self.directed_edgedict:
+        if region_idx >= self.node_count():
             return []
 
-        # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
-        # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
-        if dist == 1:
-            return self.directed_edgedict[region_idx]
+        neighbors = []
 
-        by_distance = []
-        added = set( [region_idx,] )
+        for (vertex, vert_dist, _) in self.ig.bfsiter(int(region_idx), advanced=True):
+            if vert_dist == dist:
+                neighbors.append(vertex.index)
+            
+            if vert_dist > dist:
+                return neighbors
+        
+        return neighbors
 
-        for curr_dist in range(dist):
-            if curr_dist == 0:
-                by_distance.append( self.neighbors(region_idx) )
-
-                added.update(by_distance[curr_dist])
-
-            else:
-                next_round = set()
-                for parent_idx in by_distance[curr_dist - 1]:
-                    next_round.update(self.neighbors(parent_idx))
-
-                # De-duplicate and flatten a list of the neighbors of all cells
-                by_distance.append( [c for c in next_round if c not in added] )
-
-                added.update(by_distance[curr_dist])
-
-        return by_distance[dist - 1]
-
-    def distance(self, region_idx, traverse_func, dest_func, max_distance=None):
+    def distance(self, region_idx, dest_func, max_distance=None):
         '''
         Find path from region_idx to a node that satisfies `dest_func`, traveling
         only through nodes that satisfy `traverse_func`. Return the destination idx
@@ -69,51 +75,31 @@ class Graph(object):
 
         The returned `dist` is guaranteed to be the shortest distance.
         '''
-        queue = collections.deque()
-        queue.append( (region_idx, 0) )
 
-        added = set()
-        added.add(region_idx)
+        # region_idx doesn't exist in the graph
+        if region_idx >= self.node_count():
+            return (None, 0)
 
-        while len(queue) > 0:
-            (idx, dist) = queue.popleft()
-
-            # If no valid destination is discovered by taking `max_distance` steps
-            # then stop looking.
-            if max_distance and dist > max_distance:
-                return (None, -1)
-
-            if dest_func(idx):
-                return (idx, dist)
-
-            for next_idx in traverse_func(idx, self.neighbors(idx), {}):
-                if next_idx not in added:
-                    queue.append( (next_idx, dist + 1) )
-                    added.add(next_idx)
+        for (vertex, vert_dist, _) in self.ig.bfsiter(int(region_idx), advanced=True):
+            if dest_func(vertex.index):
+                return (vertex.index, vert_dist)
+            
+            if max_distance and vert_dist > max_distance:
+                return (None, max_distance)
         
-        return (None, -1)
+        return (None, max_distance)
 
-    def floodfill(self, region_idx, fill_func):
+
+    def floodfill(self, region_idx):
         '''
         Expand in all directions from `region_idx` as long as new cells satisfy
         the `fill_func`.
         '''
-        cells = [region_idx, ]
 
-        queue = collections.deque([region_idx,])
-        added = set([region_idx,])
+        if region_idx >= self.node_count():
+            return []
 
-        while len(queue) > 0:
-            next_idx = queue.popleft()
-
-            for neighbor_idx in self.neighbors(next_idx):
-                if neighbor_idx not in added and fill_func(neighbor_idx):
-                    cells.append(neighbor_idx)  # Store this cell as part of the resulting set
-                    queue.append(neighbor_idx)  # Continue flood to this cell's neighbors
-
-                    added.add(neighbor_idx)     # Ensure we don't revisit this cell later
-
-        return cells
+        return [ v.index for v in self.ig.bfsiter(int(region_idx)) ]
 
 def BuildGraph(cells, vor):
     '''

@@ -300,19 +300,35 @@ class World(AbstractCellGroup):
             
             region.watershed()
         
-    def label(self):
-        wr = self.CreateRegion(self.cells)
+        self._build_continents()
+        
+    def _build_continents(self):
+        '''
+        Establish distinct continents based on the terrain. Its important that Cell.type has been set
+        for all cells prior to the execution of this function.
 
-        # Start a continuent at a random land cell
-        land_cells = list( filter(lambda c: c.type == Cell.Type.LAND, self.cells) )
+        Once run, the World.continents list will be populated with all Landforms in the world.
+        '''
 
-        for cell in land_cells:
-            # if the cell is not yet part of a continent
+        def edge_filter(edge):
+            (src, dest) = edge
+
+            return self.get_cell(src).type == Cell.Type.LAND and \
+                self.get_cell(dest).type == Cell.Type.LAND
+
+        landgraph = self.graph.subgraph(edge_filter)
+
+        for cell in filter(lambda c: c.type == Cell.Type.LAND, self.cells):
+            # If the cell is not yet part of a continent
             if len( list(filter(lambda con: con.contains(cell.region_idx), self.continents)) ) == 0:
                 # Flood fill across Land cells to generate the full continent
-                cell_idxs = wr.graph.floodfill(cell.region_idx, lambda c: self.get_cell(c).type == Cell.Type.LAND)
+                cell_idxs = landgraph.floodfill(cell.region_idx)
 
-                # Create a Landform and add it to the continent list
+                # One-cell islands won't bein the landgraph. If floodfill comes up empty that means we've got a one-cell
+                # island. Still a landform, though!
+                if cell.region_idx not in cell_idxs:
+                    cell_idxs.append(cell.region_idx)
+
                 self.continents.append( Landform(self.get_cells(cell_idxs), self.vor, self.graph) )
 
     def _form_plates(self, region):
@@ -364,10 +380,12 @@ class World(AbstractCellGroup):
                     plate_centers.append(cell)
                     plate_dist.append(1) # all plates start at dist=1
 
-    '''
-    A boundary cell is a cell that extends beyond the edge of the world.
-    '''
+
     def _label_boundary(self, cells):
+        '''
+        A boundary cell is a cell that extends beyond the edge of the world. This function updates each
+        cell's `is_boundary` property to properly reflect whether they're a boundary cell.
+        '''
         for cell in cells:
             region = self.get_region(cell.region_idx)
 

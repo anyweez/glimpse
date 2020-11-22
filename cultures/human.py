@@ -5,6 +5,14 @@ from structs import Cell
 class HumanCulture(culture.Culture):
     def __init__(self, cells, vor, graph, lang):
         super().__init__(cells, vor, graph, lang)
+
+        def edge_filter(edge):
+            (src, dest) = edge
+
+            return self.get_cell(src).type == Cell.Type.LAND and \
+                self.get_cell(dest).type == Cell.Type.LAND
+
+        self.landgraph = graph.subgraph(edge_filter)
     
     def city_survivability(self, idx, world, others_idx):
         cell = world.get_cell(idx)
@@ -26,28 +34,20 @@ class HumanCulture(culture.Culture):
         return 10.0
 
     def city_economy(self, idx, world, others_idx):
-        # Can travel over and land cell
-        def travel(source_idx, dest_idxs, _):
-            return dest_idxs
-
         # Destination is a water cell
         def water(dest_idx):
             return world.get_cell(dest_idx).type == Cell.Type.WATER
 
-        (_, dist) = world.graph.distance(idx, travel, water, max_distance=5)
+        (_, dist) = world.graph.distance(idx, water, max_distance=5)
 
         return (5 - dist) * 10.0 if dist > 0 else 0
 
     def city_threat(self, idx, world, others_idx):
-        # Any land cell is eligible for travel
-        def travel(source_idx, next_idxs, _):
-            return [c.region_idx for c in world.get_cells(next_idxs) if c.type == Cell.Type.LAND]
-
         def other_city(dest_idx):
             return dest_idx in others_idx
 
-        # Find the distance to the nearest city. The closer, the more dangerous.
-        (_, dist) = world.graph.distance(idx, travel, other_city, max_distance=20)
+        # Find the distance to the nearest city. The closer, the more dangerous. Only land cells matter.
+        (_, dist) = self.landgraph.distance(idx, other_city, max_distance=20)
 
         if dist >= 0 and dist < 20:
             return 100.0 - (dist * 5.0)

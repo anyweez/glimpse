@@ -159,7 +159,7 @@ def render(world, cities=[], forests=[], poi_lib=None, rivers={}, names={}, opts
             def land(idx):
                 return world.get_cell(idx).type == Cell.Type.LAND
 
-            (_, dist) = world.graph.distance(cell.region_idx, lambda _, idxs, __: idxs, land, max_distance=10)
+            (_, dist) = world.graph.distance(cell.region_idx, land, max_distance=10)
 
             region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
 

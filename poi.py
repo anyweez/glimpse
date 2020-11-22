@@ -25,19 +25,19 @@ class PointOfInterestLibrary(object):
     def list_types(self):
         return list(PointOfInterest.Type)
 
-def _checkForLake(region_idx, world, existing_lakes):
+def _checkForLake(region_idx, world, graph, existing_lakes):
     '''
     Check to see if the specified cell is part of a lake. If so, return a LAKE PointOfInterest.
     If not, return None.
     '''
-    LakeMinSize = 3
+    LakeMinSize = 6
     LakeMaxSize = 40
 
     # If this isn't a water cell, can't be a lake
     if world.get_cell(region_idx).type != Cell.Type.WATER:
         return None
 
-    idxs = world.graph.floodfill(region_idx, lambda idx: world.get_cell(idx).type == Cell.Type.WATER)
+    idxs = graph.floodfill(region_idx)
     
     if len(idxs) >= LakeMinSize and len(idxs) <= LakeMaxSize:
         return PointOfInterest(
@@ -49,26 +49,26 @@ def _checkForLake(region_idx, world, existing_lakes):
 
     return None
 
-def _checkForMountain(region_idx, world, existing_mountains):
+def _checkForMountain(region_idx, world, graph, existing_mountains):
     '''
     Check to see if the specified cell is part of a mountain. If so, return a MOUNTAIN
     PointOfInterest. If not, return None.
     '''
-    MountainMinSize = 8
-    MountainMaxSize = 30
-    MountainMinHeight = 0.6
+    MountainMinSize = 6
+    MountainMaxSize = 50
+    # MountainMinHeight = 0.6
 
     # A mountain is land with elevation > MountainMinHeight
-    def is_mountain(idx):
-        cell = world.get_cell(idx)
+    # def is_mountain(idx):
+    #     cell = world.get_cell(idx)
 
-        return cell.type == Cell.Type.LAND and cell.elevation > MountainMinHeight
+    #     return cell.type == Cell.Type.LAND and cell.elevation > MountainMinHeight
 
     # If this cell is not a mountain, no need to floodfill.
-    if not is_mountain(region_idx):
-        return None
+    # if not is_mountain(region_idx):
+    #     return None
     
-    idxs = world.graph.floodfill(region_idx, is_mountain)
+    idxs = graph.floodfill(region_idx)
 
     if len(idxs) >= MountainMinSize and len(idxs) <= MountainMaxSize:
         return PointOfInterest(
@@ -93,26 +93,47 @@ def DetectAll(world):
     Detect all points of interest in the provided world. This function returns a 'library'
     containing all of the POI's organized by type.
     '''
+    def edge_filter_water(edge):
+        (src, dest) = edge
+
+        return world.get_cell(src).type == Cell.Type.WATER and \
+            world.get_cell(dest).type == Cell.Type.WATER
+
+    def edge_filter_mountain(edge):
+        (src, dest) = edge
+
+        src_cell = world.get_cell(src)
+        dest_cell = world.get_cell(dest)
+
+        return src_cell.type == Cell.Type.LAND and \
+            dest_cell.type == Cell.Type.LAND and \
+            src_cell.elevation > 0.6 and \
+            dest_cell.elevation > 0.6
+
+    watergraph = world.graph.subgraph(edge_filter_water)
+    mountaingraph = world.graph.subgraph(edge_filter_mountain)
+
 
     pois = {}
     for poi_type in list( PointOfInterest.Type ):
         pois[poi_type] = []
 
+    # List of all POI's that we detect
     poi_categories = [
-        { 'func': _checkForLake, 'poi_type': PointOfInterest.Type.LAKE, 'cell_type': Cell.Type.WATER },
-        { 'func': _checkForMountain, 'poi_type': PointOfInterest.Type.MOUNTAIN, 'cell_type': Cell.Type.LAND },
+        { 'func': _checkForLake, 'poi_type': PointOfInterest.Type.LAKE, 'cell_type': Cell.Type.WATER, 'graph': watergraph },
+        { 'func': _checkForMountain, 'poi_type': PointOfInterest.Type.MOUNTAIN, 'cell_type': Cell.Type.LAND, 'graph': mountaingraph },
     ]
 
     for category in poi_categories:
         poi_type = category['poi_type']
 
-        cells = [c for c in world.cells if c.type == category['cell_type'] and not _already_detected(c.region_idx, pois[poi_type])]
+        for cell in world.cells:
+            # Investigate this cell if its the right type and isn't already part of a POI of the same category.
+            if cell.type == category['cell_type'] and not _already_detected(cell.region_idx, pois[poi_type]):
+                next_poi = category['func'](cell.region_idx, world, category['graph'], pois[poi_type])
 
-        for cell in cells:
-            next_poi = category['func'](cell.region_idx, world, pois[poi_type])
-
-            if next_poi is not None:
-                pois[poi_type].append(next_poi)
+                if next_poi is not None:
+                    pois[poi_type].append(next_poi)
 
     library = PointOfInterestLibrary(pois)
 

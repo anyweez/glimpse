@@ -21,6 +21,9 @@ class River(structs.AbstractCellGroup):
 
 def FormRivers(world):
     # Threshold for flow rate required to be visible
+    MinFlowThreshold = 10
+    MinRiverLength = 5
+
     # Rainfall everywhere, flows to lowest neighbor
     # Add weight to graph edge, continue adding until we reach a water cell
 
@@ -33,10 +36,7 @@ def FormRivers(world):
         first = world.get_cell(first_idx)
         second = world.get_cell(second_idx)
 
-        if first.elevation <= second.elevation:
-            return first_idx
-        else:
-            return second_idx
+        return first_idx if first.elevation <= second.elevation else second_idx
 
     def flow(src_idx):
         '''
@@ -70,22 +70,16 @@ def FormRivers(world):
     for cell in [c for c in cells if c.type == Cell.Type.LAND]:
         flow(cell.region_idx)
 
-    ## TODO:
-    ##   * edges.keys() is the list of edges for the graph; only include if flow rate > X
-    ##   * use this graph ^^ for creating the river
-    ##   * delete River.edges property, use the graph instead in segments()
-    ##   * delete cell flow for now, always return 1
-
-    rivergraph = Graph([pair for pair, flow_rate in edges.items() if flow_rate > 10])
+    rivergraph = Graph([pair for pair, flow_rate in edges.items() if flow_rate > MinFlowThreshold])
 
     rivers = []
     all_rivers = set()
 
-    for cell in [c for c in cells if c.type == Cell.Type.LAND]:
-        if cell.region_idx not in all_rivers:
-            river_set = rivergraph.floodfill(cell.region_idx, lambda idx: True)
+    for cell_idx in rivergraph.nodes():
+        if cell_idx not in all_rivers:
+            river_set = rivergraph.floodfill(cell_idx)
 
-            if len(river_set) > 6:
+            if len(river_set) >= MinRiverLength:
                 r = River(world.get_cells(river_set), world.vor, rivergraph)
                 rivers.append(r)
 
