@@ -8,14 +8,8 @@ class Graph(object):
             if src not in self.directed_edgedict:
                 self.directed_edgedict[src] = []
             
-            # if dest not in self.directed_edgedict:
-            #     self.directed_edgedict[dest] = []
-            
             if dest not in self.directed_edgedict[src]:
                 self.directed_edgedict[src].append(dest)
-
-            # if src not in self.directed_edgedict[dest]:
-            #     self.directed_edgedict[dest].append(src)
 
     def node_count(self):
         nodes = set()
@@ -54,23 +48,16 @@ class Graph(object):
                 by_distance.append( self.neighbors(region_idx) )
 
                 added.update(by_distance[curr_dist])
-                # for c in by_distance[curr_dist]:
-                #     added.add(c)
 
             else:
                 next_round = set()
                 for parent_idx in by_distance[curr_dist - 1]:
                     next_round.update(self.neighbors(parent_idx))
-                    # for cell in self.neighbors(parent_idx, dist=1):
-                    #     next_round.add(cell)
 
-                # next_round = list( next_round )
                 # De-duplicate and flatten a list of the neighbors of all cells
                 by_distance.append( [c for c in next_round if c not in added] )
 
                 added.update(by_distance[curr_dist])
-                # for c in by_distance[curr_dist]:
-                #     added.add(c)
 
         return by_distance[dist - 1]
 
