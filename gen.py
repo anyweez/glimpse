@@ -1,11 +1,11 @@
 import random, structs, numpy, datetime, sys, multiprocessing, pprint
-import voronoi, civilization, graph, renderer, forest, poi, languages, cultures
+import voronoi, civilization, graph, renderer, forest, poi, languages, cultures, river
 
 seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 2000
+PointCount = 50000
 NumCities = 4
 NumWorlds = 1
 NumForests = 14
@@ -47,6 +47,10 @@ def generate(world_idx, language_list):
 
         forests.append(f)
 
+    ## Generate rivers
+    print('  [%s] Forming rivers...' % (world.id,))
+    rivers = river.FormRivers(world)
+
     ## Find points of interest
     print('  [%s] Identifying points of interest...' % (world.id,))
     poi_lib = poi.DetectAll(world)
@@ -68,50 +72,41 @@ def generate(world_idx, language_list):
 
     # Render 'clean' map without POIs
     render_opts = renderer.RenderOptions()
+    render_opts.filename = 'world-%s.png' % (world.id,)
 
     renderer.render(
         world, 
         cities=cities, 
         forests=forests,
+        rivers=rivers,
         opts=render_opts,
     )
 
     # Render map with POIs highlighted
-    render_opts_poi = renderer.RenderOptions()
-    render_opts_poi.filename = 'world_poi.png'
-    render_opts_poi.highlight_poi = True
+    # render_opts_poi = renderer.RenderOptions()
+    # render_opts_poi.filename = 'world_poi.png'
+    # render_opts_poi.highlight_poi = True
 
-    renderer.render(
-        world, 
-        cities=cities, 
-        forests=forests,
-        poi_lib=poi_lib,
-        opts=render_opts_poi,
-    )
+    # renderer.render(
+    #     world, 
+    #     cities=cities, 
+    #     forests=forests,
+    #     poi_lib=poi_lib,
+    #     opts=render_opts_poi,
+    # )
 
     # Render SVG
-    render_opts_svg = renderer.RenderOptions()
-    render_opts_svg.filename = 'gallery/maps/world-%s.svg' % (world.id,)
+    # render_opts_svg = renderer.RenderOptions()
+    # render_opts_svg.filename = 'gallery/maps/world-%s.svg' % (world.id,)
 
-    renderer.render(
-        world, 
-        cities=cities, 
-        forests=forests,
-        names=names,
-        poi_lib=poi_lib,
-        opts=render_opts_svg,
-    )
-
-
-    # world.render(
-    #     cities=cities,
-    #     cell_labels=False, 
-    #     color_boundaries=True, 
-    #     cell_elevation=True, 
-    #     show_graph=False, 
-    #     tectonics=False,
-    #     outline_landforms=True,
-    #     heightmap=True
+    # renderer.render(
+    #     world, 
+    #     cities=cities, 
+    #     forests=forests,
+    #     rivers=rivers,
+    #     names=names,
+    #     poi_lib=poi_lib,
+    #     opts=render_opts_svg,
     # )
 
 if __name__ == '__main__':
@@ -130,9 +125,3 @@ if __name__ == '__main__':
     print('Generating %d world(s)...' % (NumWorlds,))
     for idx in range(NumWorlds):
         generate(idx, langs)
-    # with multiprocessing.Pool() as pool:
-    #     for idx in range(NumWorlds):
-    #         pool.apply_async(generate, args=(idx,langs))
-        
-        # pool.close()
-        # pool.join()

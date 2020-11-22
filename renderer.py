@@ -1,4 +1,4 @@
-import enum, cairo, colour, math, random, json
+import enum, cairo, colour, math, random, json, functools
 
 import xml.etree.ElementTree as ET
 from structs import Cell
@@ -78,9 +78,28 @@ def draw_tree(ctx, point):
 
     ctx.fill()
 
+def draw_line_between(ctx, src, dest, color):
+    ctx.set_source_rgb(*color)
+
+    ctx.move_to(*src)
+    ctx.line_to(*dest)
+    ctx.set_line_width(0.003)
+    ctx.stroke()
 
 
-def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOptions()):
+class RenderColor(object):
+    '''
+    Color definitions
+    '''
+    WaterShallow =  rgb(1, 133, 209)
+    WaterDeep =     rgb(3, 119, 188)
+    WaterRiver =    rgb(0, 96, 152)
+
+
+def render(world, cities=[], forests=[], poi_lib=None, rivers={}, names={}, opts=RenderOptions()):
+    '''
+    Renders world and all related entities to an image.
+    '''
     def create_surface(fmt):
         if fmt == 'png':
             return cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y)
@@ -112,37 +131,44 @@ def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOpti
         num_colors = 25
         gradient = list( color_sealevel.range_to(color_peak, num_colors) )
 
-        for cell in world.cells:
-            if cell.type == Cell.Type.LAND:
-                color_idx = math.floor( cell.elevation * num_colors )
+        for cell in [c for c in world.cells if c.type == Cell.Type.LAND]:
+            color_idx = math.floor( cell.elevation * num_colors )
 
-                region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
-                draw_region(ctx, region, gradient[color_idx].rgb)
-            
-            if cell.type == Cell.Type.WATER:
-                def land(idx):
-                    return world.get_cell(idx).type == Cell.Type.LAND
+            region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
+            draw_region(ctx, region, gradient[color_idx].rgb)
 
-                (_, dist) = world.graph.distance(cell.region_idx, lambda _, idxs, __: idxs, land, max_distance=10)
+        ## Draw rivers
+        for r in rivers:
+            for edge in r.graph.edges():
+                src_pt = transform(world.get_cell(edge[0]).location)
+                dest_pt = transform(world.get_cell(edge[1]).location)
 
-                region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
+                # 0,107,169
+                draw_line_between(ctx, src_pt, dest_pt, RenderColor.WaterRiver)
 
-                if dist < 4:
-                    draw_region(ctx, region, rgb(1, 133, 209))
-                elif dist < 8 and random.random() < 0.5:
-                    draw_region(ctx, region, rgb(1, 133, 209))
-                else:
-                    draw_region(ctx, region, rgb(3, 119, 188))
-        
         ## Draw forests
         for f in forests:
             for cell in f.cells:
                 region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
 
-                # draw_region(ctx, region, rgb(255, 0, 0))
-
                 if random.random() < 0.33:
                     draw_tree(ctx, cell.location)
+
+        ## Draw water
+        for cell in [c for c in world.cells if c.type == Cell.Type.WATER]:
+            def land(idx):
+                return world.get_cell(idx).type == Cell.Type.LAND
+
+            (_, dist) = world.graph.distance(cell.region_idx, lambda _, idxs, __: idxs, land, max_distance=10)
+
+            region = list( map(lambda pt: transform(pt), world.get_region(cell.region_idx)) )
+
+            if dist < 4:
+                draw_region(ctx, region, RenderColor.WaterShallow)
+            elif dist < 8 and random.random() < 0.5:
+                draw_region(ctx, region, rgb(1, 133, 209))
+            else:
+                draw_region(ctx, region, RenderColor.WaterDeep)
 
         ## Highlight points of interest
         if poi_lib is not None and opts.highlight_poi:
@@ -210,27 +236,15 @@ def render(world, cities=[], forests=[], poi_lib=None, names={}, opts=RenderOpti
                     poi_group_el.set('class', str(poi_type).split('.')[1].lower())
                     poi_group_el.set('details',  '{ "name": "%s" }' % (names[poi],))
                     
-
                     # Add all cells to this <g>
                     for cell in poi.cells:
                         poi_el = ET.Element('polygon')
 
                         region = list( map(map_region_pt, world.get_region(cell.region_idx)) )
-                        # draw_region(ctx, region, color))
                         poi_el.set('points', ' '.join(region))
 
                         poi_group_el.append(poi_el)
                     
                     doc.getroot().append(poi_group_el)
-                    # out_region = []
-
-                    # for point in poi.outline():
-                    #     out_region.append(','.join( (str(point[0] * opts.scale_x), str((1.0 - point[1]) * opts.scale_y)) ))
-
-                    # # poi_el.set('points', ' '.join(out_region))
-                    # # poi_el.set('class', str(poi_type).split('.')[1].lower()) # PoiType.LAKE => LAKE
-                    # # poi_el.set('details', '{ "name": "%s" }' % (names[poi],))
-
-                    # doc.getroot().append(poi_el)
 
         doc.write(opts.filename)

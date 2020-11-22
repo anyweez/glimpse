@@ -16,7 +16,7 @@ class Graph(object):
 
             # if src not in self.directed_edgedict[dest]:
             #     self.directed_edgedict[dest].append(src)
-    
+
     def node_count(self):
         nodes = set()
 
@@ -29,13 +29,17 @@ class Graph(object):
     def edge_count(self):
         return sum([len(v) for v in self.directed_edgedict.values()])
 
+    def edges(self):
+        for src in self.directed_edgedict.keys():
+            for dest in self.directed_edgedict[src]:
+                yield (src, dest)
+
     def neighbors(self, region_idx, dist=1):
         '''
         Find all neighbors @ distance `dist` for the specified node.
         '''
         if region_idx not in self.directed_edgedict:
             return []
-            # raise errors.InvalidCellError('Cell #%d does not exist in region' % (region_idx,))
 
         # If we're looking for immediate neighbors, jump straight to the nmap where this is explicitly
         # known. This also allows us to use neighbors(dist=1) for calculations when dist != 1
@@ -47,23 +51,26 @@ class Graph(object):
 
         for curr_dist in range(dist):
             if curr_dist == 0:
-                by_distance.append( self.neighbors(region_idx, dist=1) )
+                by_distance.append( self.neighbors(region_idx) )
 
-                for c in by_distance[curr_dist]:
-                    added.add(c)
+                added.update(by_distance[curr_dist])
+                # for c in by_distance[curr_dist]:
+                #     added.add(c)
 
             else:
                 next_round = set()
                 for parent_idx in by_distance[curr_dist - 1]:
-                    for cell in self.neighbors(parent_idx, dist=1):
-                        next_round.add(cell)
+                    next_round.update(self.neighbors(parent_idx))
+                    # for cell in self.neighbors(parent_idx, dist=1):
+                    #     next_round.add(cell)
 
-                next_round = list( next_round )
+                # next_round = list( next_round )
                 # De-duplicate and flatten a list of the neighbors of all cells
                 by_distance.append( [c for c in next_round if c not in added] )
 
-                for c in by_distance[curr_dist]:
-                    added.add(c)
+                added.update(by_distance[curr_dist])
+                # for c in by_distance[curr_dist]:
+                #     added.add(c)
 
         return by_distance[dist - 1]
 
@@ -113,7 +120,7 @@ class Graph(object):
             next_idx = queue.popleft()
 
             for neighbor_idx in self.neighbors(next_idx):
-                if fill_func(neighbor_idx) and neighbor_idx not in added:
+                if neighbor_idx not in added and fill_func(neighbor_idx):
                     cells.append(neighbor_idx)  # Store this cell as part of the resulting set
                     queue.append(neighbor_idx)  # Continue flood to this cell's neighbors
 

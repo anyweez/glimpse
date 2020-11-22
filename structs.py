@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import enum, random, math, colour, collections, numpy, functools, string, pprint
 import errors
 
@@ -49,7 +49,13 @@ class AbstractCellGroup(object):
         self.vor = vor
         self.graph = graph
 
-        self.available_cells = {}
+        max_region_idx = cells[0].region_idx
+
+        for cell in cells:
+            if cell.region_idx > max_region_idx:
+                max_region_idx  = cell.region_idx
+
+        self.available_cells = [None,] * (max_region_idx + 1)
         self.vertex_count = {}
 
         # Populate self.available_cells
@@ -67,7 +73,10 @@ class AbstractCellGroup(object):
                 self.vertex_count[idx] += 1
 
     def contains(self, region_idx):
-        return region_idx in self.available_cells
+        if region_idx >= len(self.available_cells):
+            return False
+
+        return self.available_cells[region_idx] != None
 
     def get_region(self, region_idx):
         '''
@@ -92,7 +101,7 @@ class AbstractCellGroup(object):
         if isinstance(region_idx, Cell):
             raise Exception('Provide a region_idx, not a Cell')
 
-        if region_idx not in self.available_cells:
+        if not self.contains(region_idx):
             raise errors.InvalidCellError('Requested non-existant or out of scope cell #%d' % (region_idx,))
 
         return self.available_cells[region_idx]
@@ -106,7 +115,7 @@ class AbstractCellGroup(object):
         # on cells outside of their scope so I think its safe to make this decision. I have
         # a troubling feeling that not providing any notification is going to generate nasty
         # bugs, though.
-        return [self.available_cells[idx] for idx in region_idxs if idx in self.available_cells]
+        return [self.available_cells[idx] for idx in region_idxs if self.contains(idx)]
 
     def outline(self):
         ridges = []
@@ -125,39 +134,6 @@ class AbstractCellGroup(object):
                 ridges.append(ridge)
 
         return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
-
-    def polygon(self):
-        print('polygon <start>')
-        outline = self.outline()
-
-        points = {}
-        polygon = []
-
-        for (src, dest) in outline:
-            src = (float(src[0]), float(src[1]))
-            dest = (float(dest[0]), float(dest[1]))
-
-            points[src] = dest
-
-        src = tuple( map(lambda dim: float(dim), outline[0][0]) )
-        dest = tuple( map(lambda dim: float(dim), outline[0][1]) )
-
-        polygon.append(src)
-        print('  > adding %s' % (src,))
-        polygon.append(dest)
-        print('  > adding %s' % (dest,))
-
-        while dest in points:
-            print('  > adding %s' % (points[dest],))
-            polygon.append(points[dest])
-
-            dest = points[dest]
-        
-        print(points)
-        print(polygon)
-
-        print('polygon <end>')
-        return polygon
 
 class WorldRegion(AbstractCellGroup):
     def __init__(self, cells, vor, graph):  
@@ -232,8 +208,9 @@ class WorldRegion(AbstractCellGroup):
     it contains a vertex that isn't shared by any other cell in the region.
     '''
     def is_border(self, region_idx):
-        if region_idx not in self.available_cells:
-            raise errors.InvalidCellError('Cell does not exist in region')
+        if not self.contains(region_idx):
+        # if region_idx not in self.available_cells:
+            raise errors.InvalidCellError('Cell %d does not exist in region' % (region_idx,))
 
         for r in self.get_vertices(region_idx):
             if self.vertex_count[r] == 1:
@@ -246,11 +223,11 @@ class Landform(AbstractCellGroup):
         super().__init__(cells, vor, graph)
 
     # TODO: move to AbstractCellGroup?
-    def contains(self, region_idx):
-        try:
-            return self.get_cell(region_idx)
-        except errors.InvalidCellError:
-            return False
+    # def contains(self, region_idx):
+    #     try:
+    #         return self.get_cell(region_idx)
+    #     except errors.InvalidCellError:
+    #         return False
 
 class World(AbstractCellGroup):
     '''

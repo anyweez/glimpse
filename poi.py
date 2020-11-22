@@ -99,19 +99,20 @@ def DetectAll(world):
         pois[poi_type] = []
 
     poi_categories = [
-        { 'func': _checkForLake, 'poi_type': PointOfInterest.Type.LAKE },
-        { 'func': _checkForMountain, 'poi_type': PointOfInterest.Type.MOUNTAIN },
+        { 'func': _checkForLake, 'poi_type': PointOfInterest.Type.LAKE, 'cell_type': Cell.Type.WATER },
+        { 'func': _checkForMountain, 'poi_type': PointOfInterest.Type.MOUNTAIN, 'cell_type': Cell.Type.LAND },
     ]
 
-    for cell in world.cells:
-        for category in poi_categories:
-            poi_type = category['poi_type']
+    for category in poi_categories:
+        poi_type = category['poi_type']
 
-            if not _already_detected(cell.region_idx, pois[poi_type]):
-                next_poi = category['func'](cell.region_idx, world, pois[poi_type])
+        cells = [c for c in world.cells if c.type == category['cell_type'] and not _already_detected(c.region_idx, pois[poi_type])]
 
-                if next_poi is not None:
-                    pois[poi_type].append(next_poi)
+        for cell in cells:
+            next_poi = category['func'](cell.region_idx, world, pois[poi_type])
+
+            if next_poi is not None:
+                pois[poi_type].append(next_poi)
 
     library = PointOfInterestLibrary(pois)
 
