@@ -1,4 +1,4 @@
-import enum, cairo, colour, math, random, json, functools
+import enum, cairo, colour, math, random, json, functools, numpy
 
 import xml.etree.ElementTree as ET
 from structs import Cell
@@ -317,3 +317,80 @@ def render(world, cities=[], forests=[], poi_lib=None, rivers={}, names={}, opts
 #             end = transform(outline[1])
 
 #             draw_outline(ctx, start, end)
+
+
+def simple_render(world, vd, opts):
+    def create_surface(fmt):
+        if fmt == 'png':
+            return cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y)
+        
+        if fmt == 'svg':
+            return cairo.SVGSurface(opts.filename, opts.scale_x, opts.scale_y)
+
+        return Exception('Unknown image type requested: %s' % (fmt,))
+
+    def close_surface(format, cairo_surface):
+        if format == 'png':
+            surface.write_to_png(opts.filename)
+
+    output_fmt = opts.filename[-3:]
+
+    with create_surface(output_fmt) as surface:
+        ctx = cairo.Context(surface)
+        ctx.scale(opts.scale_x, opts.scale_y)
+
+        ctx.rectangle(0, 0, 1, 1)
+        ctx.set_source_rgb(1.0, 1.0, 1.0)
+        ctx.fill()
+
+
+        theme = FullColorTheme()
+
+        color_sealevel = colour.Color('green')
+        color_peak = colour.Color('brown')
+
+        num_colors = 10
+
+        gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
+
+        land_elevation_range = 1.0 - world.get_param('WaterlineHeight')
+
+        # Draw land and water
+        for idx in world.cell_idxs():
+            region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
+
+            if world.cp_celltype[idx] == Cell.Type.WATER:
+                if world.cp_elevation[idx] < world.get_param('WaterlineHeight') / 2.0:
+                    draw_region(ctx, region, FullColorTheme.WaterDeep)
+                else:
+                    draw_region(ctx, region, FullColorTheme.WaterShallow)
+
+            else:
+                # How far is this cell above sea level?
+                distance_above_water = world.cp_elevation[idx] - world.get_param('WaterlineHeight')
+
+                color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradient) )
+                draw_region(ctx, region, gradient[color_idx])
+
+        # Draw outlines
+        for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
+            # Get all cells with the current landform_id
+            cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
+
+            for outline in vd.outline(cell_idxs):
+                start = transform(outline[0])
+                end = transform(outline[1])
+
+                draw_outline(ctx, start, end)
+
+        # graph sample
+        # for idx in random.choices(world.cell_idxs(), k=10):
+        #     neighbors = world.graph.neighbors(idx)
+
+        #     for n in neighbors:
+        #         src = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
+        #         dest = transform( (world.cp_latitude[n], world.cp_longitude[n]) )
+
+        #         draw_line_between(ctx, src, dest, (0, 0, 0, 1))
+
+        close_surface(output_fmt, surface)

@@ -6,6 +6,44 @@ from scipy.spatial import voronoi_plot_2d
 from PIL import Image
 from noise import snoise2
 
+class VoronoiDiagram(object):
+    def __init__(self, vor, mapping):
+        self.vor = vor
+        self.mapping = mapping # cell_idx => voronoi_idx
+
+    def get_region(self, cell_idx):
+        '''
+        Get the polygon that defines the region for the specified cell_id/region_id.
+        Returns a list of 2D points, or an empty list if the region isn't defined within
+        the Voronoi diagram; see more about when this happens here:
+
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+        '''
+        v_idx = self.mapping[cell_idx]
+
+        if -1 in self.vor.regions[v_idx]:
+            return []
+
+        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )       
+
+    def outline(self, cell_idxs):
+        ridges = []
+
+        '''
+        get all allowed regions
+        for all ridge vertices
+            check if ridge is in exactly one region
+        '''
+        supported_regions = list( map(lambda idx: self.vor.regions[self.mapping[idx]], cell_idxs) )
+
+        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
+
+        for ridge in self.vor.ridge_vertices:
+            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
+                ridges.append(ridge)
+
+        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
+
 class Cell(object):
     '''
     Cells represent sections of a World that have certain characteristics like terrain types
@@ -14,63 +52,69 @@ class Cell(object):
     '''
     Type = enum.Enum('CellType', 'NONE WATER LAND FIRE')
 
-    def __init__(self, region_idx, location):
-        self.region_idx = region_idx
-        self.location = location
-        self.neighbor_to = []
+    # def __init__(self, region_idx, location):
+    #     self.region_idx = region_idx
+        # self.location = location
+        # self.neighbor_to = []
 
         # Does this cell exist on the border of the world?
-        self.is_boundary = False
+        # self.is_boundary = False
 
-        self.type = Cell.Type.NONE
-        self.elevation = 0
+        # self.type = Cell.Type.NONE
+        # self.elevation = 0
 
         # What tectonic plate is this cell a part of?
-        self.plate_id = None
+        # self.plate_id = None
 
-    @staticmethod
-    def FormCells(vor):
-        '''
-        Generate a series of world cells based on the specified Voronoi diagram. A directed
-        graph is also calculated based on which cells are touching each other.
-        '''
-        cells = []
+    # @staticmethod
+    # def FormCells(vor):
+    #     '''
+    #     Generate a series of world cells based on the specified Voronoi diagram. A directed
+    #     graph is also calculated based on which cells are touching each other.
+    #     '''
+    #     cells = []
+    #     v_idxs = sorted(vor.point_region)
 
-        for point_idx, region_idx in enumerate(vor.point_region):
-            cell = Cell(region_idx, vor.points[point_idx])
+    #     for point_idx, v_idx in enumerate(vor.point_region):
 
-            cells.append(cell)
+    #         cell = Cell(region_idx, vor.points[point_idx])
 
-        return cells
+    #         cells.append(cell)
+
+    #     return cells
 
 class AbstractCellGroup(object):
-    def __init__(self, cells, vor, graph):
-        self.cells = cells
-        self.vor = vor
+    def __init__(self, cell_idxs, vor, graph):
+        self.__cell_idxs = cell_idxs
+        # self.vor = vor
         self.graph = graph
 
-        max_region_idx = cells[0].region_idx
+        max_region_idx = functools.reduce(
+            lambda best, next_idx: best if best > next_idx else next_idx, 
+            cell_idxs,
+            cell_idxs[0],
+        )
 
-        for cell in cells:
-            if cell.region_idx > max_region_idx:
-                max_region_idx  = cell.region_idx
-
-        self.available_cells = [None,] * (max_region_idx + 1)
+        # self.available_cells = [None,] * max_region_idx
         self.vertex_count = {}
+        self.available_cells = set( cell_idxs )
 
         # Populate self.available_cells
-        for cell in self.cells:
-            self.available_cells[cell.region_idx] = cell
+        # for cell_idx in self.cell_idxs:
+        #     self.available_cells[cell.region_idx] = cell
 
         # Populate self.vertex_count
-        for cell in self.cells:
-            indeces = set( vor.regions[cell.region_idx] )
+        # for cell_idx in self.cell_idxs:
+        #     indeces = set( vor.regions[cell.region_idx] )
 
-            for idx in indeces:
-                if idx not in self.vertex_count:
-                    self.vertex_count[idx] = 0
+        #     for idx in indeces:
+        #         if idx not in self.vertex_count:
+        #             self.vertex_count[idx] = 0
                 
-                self.vertex_count[idx] += 1
+        #         self.vertex_count[idx] += 1
+
+    def cell_idxs(self):
+        return self.__cell_idxs
 
     def contains(self, region_idx):
         if region_idx >= len(self.available_cells):
@@ -78,18 +122,18 @@ class AbstractCellGroup(object):
 
         return self.available_cells[region_idx] != None
 
-    def get_region(self, region_idx):
-        '''
-        Get the polygon that defines the region for the specified cell_id/region_id.
-        Returns a list of 2D points, or an empty list if the region isn't defined within
-        the Voronoi diagram; see more about when this happens here:
+    # def get_region(self, region_idx):
+    #     '''
+    #     Get the polygon that defines the region for the specified cell_id/region_id.
+    #     Returns a list of 2D points, or an empty list if the region isn't defined within
+    #     the Voronoi diagram; see more about when this happens here:
 
-        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
-        '''
-        if -1 in self.vor.regions[region_idx]:
-            return []
+    #     https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+    #     '''
+    #     if -1 in self.vor.regions[region_idx]:
+    #         return []
 
-        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
+    #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
 
     def get_vertices(self, region_idx):
         if -1 in self.vor.regions[region_idx]:
@@ -106,6 +150,9 @@ class AbstractCellGroup(object):
 
         return self.available_cells[region_idx]
 
+    def get_cellcount(self):
+        return len( list(self.cell_idxs()) )
+
     def get_cells(self, region_idxs):
         # NOTE TO FUTURE SELF: I'm intentionally deciding that this function should only
         # return the cells that exist in scope. I'm running into an issue where the graph
@@ -117,23 +164,23 @@ class AbstractCellGroup(object):
         # bugs, though.
         return [self.available_cells[idx] for idx in region_idxs if self.contains(idx)]
 
-    def outline(self):
-        ridges = []
+    # def outline(self):
+    #     ridges = []
 
-        '''
-        get all allowed regions
-        for all ridge vertices
-            check if ridge is in exactly one region
-        '''
-        supported_regions = list( map(lambda cell: self.vor.regions[cell.region_idx], self.cells) )
+    #     '''
+    #     get all allowed regions
+    #     for all ridge vertices
+    #         check if ridge is in exactly one region
+    #     '''
+    #     supported_regions = list( map(lambda cell: self.vor.regions[cell.region_idx], self.cells) )
 
-        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
+    #     regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
 
-        for ridge in self.vor.ridge_vertices:
-            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
-                ridges.append(ridge)
+    #     for ridge in self.vor.ridge_vertices:
+    #         if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
+    #             ridges.append(ridge)
 
-        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
+    #     return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
 
 class WorldRegion(AbstractCellGroup):
     def __init__(self, cells, vor, graph):  
@@ -222,13 +269,6 @@ class Landform(AbstractCellGroup):
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
 
-    # TODO: move to AbstractCellGroup?
-    # def contains(self, region_idx):
-    #     try:
-    #         return self.get_cell(region_idx)
-    #     except errors.InvalidCellError:
-    #         return False
-
 class World(AbstractCellGroup):
     '''
     Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
@@ -249,12 +289,6 @@ class World(AbstractCellGroup):
         'base': random.randint(0, 1000)
     }
 
-    LandformConfig = {
-        'InitialPlateSplitProb': 0.01,
-        'InitialContinentMin': 1,
-        'InitialContinentMax': 12,
-    }
-
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
 
@@ -267,44 +301,68 @@ class World(AbstractCellGroup):
             'InitialContinentMax': random.randint(3, 8),
         }
 
-    def CreateRegion(self, cells):
-        if self.graph is None:
-            raise Exception('You must build() the world before you can create regions in it.')
+        self.worldparams = {}
+        # Cell properties; added with plugins
+        # self.__cp = {}
 
-        return WorldRegion(cells, self.vor, self.graph)
+    def add_cell_property(self, name, arr):
+        setattr(self, 'cp_%s' % (name,), arr)
 
-    def _gen_noise(self, x, y):
-        scaled_x = x / World.NoiseConfig['scale']
-        scaled_y = y / World.NoiseConfig['scale']
+    def new_cp_array(self, dtype, default_value=None):
+        if isinstance(default_value, list):
+            return numpy.array(default_value, dtype=dtype)
 
-        octaves = World.NoiseConfig['octaves']
-        persistence = World.NoiseConfig['persistence']
-        lacunarity = World.NoiseConfig['lacunarity']
+        if default_value is not None:
+            return numpy.full(self.get_cellcount() + 1, default_value, dtype=dtype)
 
-        base = World.NoiseConfig['base']
+        return numpy.array(self.get_cellcount() + 1, dtype=dtype)
 
-        return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
+    def set_param(self, name, value):
+        self.worldparams[name] = value
+    
+    def get_param(self, name):
+        return self.worldparams[name]
+
+    # def CreateRegion(self, cells):
+    #     if self.graph is None:
+    #         raise Exception('You must build() the world before you can create regions in it.')
+
+    #     return WorldRegion(cells, self.vor, self.graph)
+
+    # def _gen_noise(self, x, y):
+    #     scaled_x = x / World.NoiseConfig['scale']
+    #     scaled_y = y / World.NoiseConfig['scale']
+
+    #     octaves = World.NoiseConfig['octaves']
+    #     persistence = World.NoiseConfig['persistence']
+    #     lacunarity = World.NoiseConfig['lacunarity']
+
+    #     base = World.NoiseConfig['base']
+
+    #     return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
     def build(self):
-        self._label_boundary(self.cells)
+        # self._label_boundary(self.cells)
 
         # Establish tectonic plates. Once this is done we'll create a separate region for each.
-        wr = self.CreateRegion(self.cells)
-        self._form_plates(wr)
+        # wr = self.CreateRegion(self.cells)
+        # self._form_plates(wr)
 
-        gen_noise = lambda x, y: self._gen_noise(x, y)
+        return
+
+        # gen_noise = lambda x, y: self._gen_noise(x, y)
 
         # Run world generation functions on each plate independently.
-        for plate_id in set( [c.plate_id for c in self.cells] ):
-            cells = [c for c in self.cells if c.plate_id == plate_id]
+        # for plate_id in set( [c.plate_id for c in self.cells] ):
+        #     cells = [c for c in self.cells if c.plate_id == plate_id]
 
-            region = self.CreateRegion(cells)
+        #     region = self.CreateRegion(cells)
 
-            self._add_ocean(region)
-            self._terrainify(region)
-            self._add_elevation(region, gen_noise)
+        #     self._add_ocean(region)
+        #     self._terrainify(region)
+        #     self._add_elevation(region, gen_noise)
             
-            region.watershed()
+            # region.watershed()
         
         self._build_continents()
         
@@ -337,125 +395,125 @@ class World(AbstractCellGroup):
 
                 self.continents.append( Landform(self.get_cells(cell_idxs), self.vor, self.graph) )
 
-    def _form_plates(self, region):
-        num_plates = random.randint(
-            self.LandformConfig['InitialContinentMin'], 
-            self.LandformConfig['InitialContinentMax'], 
-        )
+    # def _form_plates(self, region):
+    #     num_plates = random.randint(
+    #         self.LandformConfig['InitialContinentMin'], 
+    #         self.LandformConfig['InitialContinentMax'], 
+    #     )
 
-        plate_centers = random.choices(region.cells, k=num_plates)
-        plate_dist = [1,] * num_plates  # distance to go out from the center to find available cells
+    #     plate_centers = random.choices(region.cells, k=num_plates)
+    #     plate_dist = [1,] * num_plates  # distance to go out from the center to find available cells
 
-        for idx, center in enumerate(plate_centers):
-            center.plate_id = idx
+    #     for idx, center in enumerate(plate_centers):
+    #         center.plate_id = idx
 
-        # Function to check whether a cell still needs to have a plate assigned. Boundary cells
-        # are excluded.
-        still_available = lambda idx: self.get_cell(idx).plate_id is None
+    #     # Function to check whether a cell still needs to have a plate assigned. Boundary cells
+    #     # are excluded.
+    #     still_available = lambda idx: self.get_cell(idx).plate_id is None
 
-        remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
+    #     remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
 
-        # Add all cells to a plate
-        while remaining > 0:
-            # For each plate, expand out from the center
-            for plate_id, center in enumerate(plate_centers):
-                avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
+    #     # Add all cells to a plate
+    #     while remaining > 0:
+    #         # For each plate, expand out from the center
+    #         for plate_id, center in enumerate(plate_centers):
+    #             avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
 
-                while len(avail) == 0:
-                    plate_dist[plate_id] += 1
-                    avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
+    #             while len(avail) == 0:
+    #                 plate_dist[plate_id] += 1
+    #                 avail = [idx for idx in region.graph.neighbors(center.region_idx, plate_dist[plate_id]) if still_available(idx)]
 
-                mark = self.get_cell( random.choice(avail) )
-                mark.plate_id = center.plate_id
+    #             mark = self.get_cell( random.choice(avail) )
+    #             mark.plate_id = center.plate_id
 
-                # Count remaining cells to be marked; break the loop if we're done.
-                remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
+    #             # Count remaining cells to be marked; break the loop if we're done.
+    #             remaining = sum( [1 for cell in region.cells if still_available(cell.region_idx)] )
 
-                if remaining == 0:
-                    break
+    #             if remaining == 0:
+    #                 break
 
-            # There's a chance to add a new plate each iteration. New plates
-            # can only exist in unmarked cells.
-            if random.random() < (self.LandformConfig['InitialPlateSplitProb'] / len(plate_centers)):
-                avail = [c for c in self.cells if c.plate_id is None]
+    #         # There's a chance to add a new plate each iteration. New plates
+    #         # can only exist in unmarked cells.
+    #         if random.random() < (self.LandformConfig['InitialPlateSplitProb'] / len(plate_centers)):
+    #             avail = [c for c in self.cells if c.plate_id is None]
 
-                if len(avail) > 0:
-                    cell = random.choice(avail)
+    #             if len(avail) > 0:
+    #                 cell = random.choice(avail)
                     
-                    cell.plate_id = len(plate_centers)
-                    plate_centers.append(cell)
-                    plate_dist.append(1) # all plates start at dist=1
+    #                 cell.plate_id = len(plate_centers)
+    #                 plate_centers.append(cell)
+    #                 plate_dist.append(1) # all plates start at dist=1
 
 
-    def _label_boundary(self, cells):
-        '''
-        A boundary cell is a cell that extends beyond the edge of the world. This function updates each
-        cell's `is_boundary` property to properly reflect whether they're a boundary cell.
-        '''
-        for cell in cells:
-            region = self.get_region(cell.region_idx)
+    # def _label_boundary(self, cells):
+    #     '''
+    #     A boundary cell is a cell that extends beyond the edge of the world. This function updates each
+    #     cell's `is_boundary` property to properly reflect whether they're a boundary cell.
+    #     '''
+    #     for cell in cells:
+    #         region = self.get_region(cell.region_idx)
 
-            if region == []:
-                cell.is_boundary = True
-            else:
-                for (x, y) in region:
-                    if x > 1.0 or x < 0.0:
-                        cell.is_boundary = True
-                    if y > 1.0 or y < 0.0:
-                        cell.is_boundary = True
+    #         if region == []:
+    #             cell.is_boundary = True
+    #         else:
+    #             for (x, y) in region:
+    #                 if x > 1.0 or x < 0.0:
+    #                     cell.is_boundary = True
+    #                 if y > 1.0 or y < 0.0:
+    #                     cell.is_boundary = True
 
     '''
     All cells at the edge of the map are water. We then traverse the graph from each of the boundary cells
     and mark cells along the path as water (% chance).
     '''
-    def _add_ocean(self, region):
-        for cell in region.cells:
-            if region.is_border(cell.region_idx):
-                cell.type = Cell.Type.WATER
+    # def _add_ocean(self, region):
+    #     for cell in region.cells:
+    #         if region.is_border(cell.region_idx):
+    #             cell.type = Cell.Type.WATER
 
-                # Traverse the cell graph twice randomly and turn each cell into
-                # water. Two anecdotally gives decent results when PointCount = 250,
-                # but the number should probably be a function of the number of cells.
-                neighbor = cell
+    #             # Traverse the cell graph twice randomly and turn each cell into
+    #             # water. Two anecdotally gives decent results when PointCount = 250,
+    #             # but the number should probably be a function of the number of cells.
+    #             neighbor = cell
 
-                iterations = round( math.sqrt(math.sqrt(len(region.cells))) )
+    #             iterations = round( math.sqrt(math.sqrt(len(region.cells))) )
 
-                for _ in range(iterations):
-                    if (random.random() < 0.8):
-                        avail = region.graph.neighbors(neighbor.region_idx)
+    #             for _ in range(iterations):
+    #                 if (random.random() < 0.8):
+    #                     avail = region.graph.neighbors(neighbor.region_idx)
 
-                        if len(avail) > 0:
-                            neighbor = self.get_cell( random.choice(avail) )
-                            neighbor.type = Cell.Type.WATER
+    #                     if len(avail) > 0:
+    #                         neighbor = self.get_cell( random.choice(avail) )
+    #                         neighbor.type = Cell.Type.WATER
 
-    def _terrainify(self, region):
-        for cell in region.cells:
-            if not cell.type == Cell.Type.WATER:
-                cell.type = Cell.Type.LAND
+    # def _terrainify(self, region):
+    #     for cell in region.cells:
+    #         if not cell.type == Cell.Type.WATER:
+    #             cell.type = Cell.Type.LAND
 
-    def _add_elevation(self, region, gen_noise):
-        # Different regions may have different elevation profiles - some will be more
-        # mountainous and others may be flatter. The 'dampener' approximates this profile
-        # and is assigned randomly. Regions with smaller dampener values will tend to be
-        # flatter.
-        #
-        # TODO: improve this -- really cool effect but did this in 30 seconds
-        dampener = random.choice([0.4, 0.4, 0.6, 1.0])
+    # def _add_elevation(self, region, gen_noise):
+    #     # Different regions may have different elevation profiles - some will be more
+    #     # mountainous and others may be flatter. The 'dampener' approximates this profile
+    #     # and is assigned randomly. Regions with smaller dampener values will tend to be
+    #     # flatter.
+    #     #
+    #     # TODO: improve this -- really cool effect but did this in 30 seconds
+    #     dampener = random.choice([0.4, 0.4, 0.6, 1.0])
 
-        for cell in region.cells:
-            if cell.type == Cell.Type.LAND:
-                cell.elevation = gen_noise(cell.location[0], cell.location[1]) * dampener
+    #     for cell in region.cells:
+    #         if cell.type == Cell.Type.LAND:
+    #             cell.elevation = gen_noise(cell.location[0], cell.location[1]) * dampener
 
-                # (_, dist_from_water) = self.graph.distance(
-                #     cell.region_idx, 
-                #     lambda _, idxs, __: idxs, 
-                #     lambda idx: region.get_cell(idx).type == Cell.Type.WATER
-                # )
-                dist_from_water = self.__distance_from_water(cell, region)
+    #             # (_, dist_from_water) = self.graph.distance(
+    #             #     cell.region_idx, 
+    #             #     lambda _, idxs, __: idxs, 
+    #             #     lambda idx: region.get_cell(idx).type == Cell.Type.WATER
+    #             # )
+    #             dist_from_water = self.__distance_from_water(cell, region)
 
-                if dist_from_water < 5:
-                    fade_pct = [.3, .5, .8, .9]
-                    cell.elevation = cell.elevation * fade_pct[dist_from_water - 1]
+    #             if dist_from_water < 5:
+    #                 fade_pct = [.3, .5, .8, .9]
+    #                 cell.elevation = cell.elevation * fade_pct[dist_from_water - 1]
 
     '''
     Find the shortest distance from the specified cell to water. Distance is defined
@@ -464,22 +522,22 @@ class World(AbstractCellGroup):
 
     TODO: transition to using graph.distance()
     '''
-    def __distance_from_water(self, cell, region):
-        queue = collections.deque()
-        queue.append( (cell.region_idx, 0) )
+    # def __distance_from_water(self, cell, region):
+    #     queue = collections.deque()
+    #     queue.append( (cell.region_idx, 0) )
 
-        # Keep track of which cells have already been searched.
-        added = set()
-        added.add(cell.region_idx)
+    #     # Keep track of which cells have already been searched.
+    #     added = set()
+    #     added.add(cell.region_idx)
 
-        while len(queue) > 0:
-            (idx, dist) = queue.popleft()
-            cell = self.get_cell(idx)
+    #     while len(queue) > 0:
+    #         (idx, dist) = queue.popleft()
+    #         cell = self.get_cell(idx)
 
-            if cell.type == Cell.Type.WATER:
-                return dist
+    #         if cell.type == Cell.Type.WATER:
+    #             return dist
 
-            for next_idx in region.graph.neighbors(idx):
-                if next_idx not in added:
-                    queue.append( (next_idx, dist + 1) ) 
-                    added.add( next_idx )
+    #         for next_idx in region.graph.neighbors(idx):
+    #             if next_idx not in added:
+    #                 queue.append( (next_idx, dist + 1) ) 
+    #                 added.add( next_idx )
