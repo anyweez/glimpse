@@ -5,8 +5,8 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 10000
-NumCities = 4
+PointCount = 30000
+NumCities = 8
 NumWorlds = 1
 NumForests = 14
 
@@ -82,18 +82,31 @@ def generate(world_idx, language_list):
     )
 
     # Render map with POIs highlighted
-    render_opts_poi = renderer.RenderOptions()
-    render_opts_poi.filename = 'world-%s_poi.png' % (world.id,)
-    render_opts_poi.highlight_poi = True
+    # render_opts_poi = renderer.RenderOptions()
+    # render_opts_poi.filename = 'world-%s_poi.png' % (world.id,)
+    # render_opts_poi.highlight_poi = True
 
-    renderer.render(
-        world, 
-        cities=cities, 
-        forests=forests,
-        rivers=rivers,
-        poi_lib=poi_lib,
-        opts=render_opts_poi,
-    )
+    # renderer.render(
+    #     world, 
+    #     cities=cities, 
+    #     forests=forests,
+    #     rivers=rivers,
+    #     poi_lib=poi_lib,
+    #     opts=render_opts_poi,
+    # )
+
+    # Render map with print theme
+    # render_opts_print = renderer.RenderOptions()
+    # render_opts_print.filename = 'world_print.png' # % (world.id,)
+    # render_opts_print.theme = 'print'
+
+    # renderer.render(
+    #     world, 
+    #     cities=cities, 
+    #     forests=forests,
+    #     rivers=rivers,
+    #     opts=render_opts_print,
+    # )
 
     # Render SVG
     # render_opts_svg = renderer.RenderOptions()
