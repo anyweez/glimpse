@@ -261,6 +261,12 @@ class World(AbstractCellGroup):
         self.continents = []
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+        self.LandformConfig = {
+            'InitialPlateSplitProb': random.random() / 50.0, # [0, .02]
+            'InitialContinentMin': random.randint(1, 3),
+            'InitialContinentMax': random.randint(3, 8),
+        }
+
     def CreateRegion(self, cells):
         if self.graph is None:
             raise Exception('You must build() the world before you can create regions in it.')
@@ -333,8 +339,8 @@ class World(AbstractCellGroup):
 
     def _form_plates(self, region):
         num_plates = random.randint(
-            World.LandformConfig['InitialContinentMin'], 
-            World.LandformConfig['InitialContinentMax'], 
+            self.LandformConfig['InitialContinentMin'], 
+            self.LandformConfig['InitialContinentMax'], 
         )
 
         plate_centers = random.choices(region.cells, k=num_plates)
@@ -370,7 +376,7 @@ class World(AbstractCellGroup):
 
             # There's a chance to add a new plate each iteration. New plates
             # can only exist in unmarked cells.
-            if random.random() < (World.LandformConfig['InitialPlateSplitProb'] / len(plate_centers)):
+            if random.random() < (self.LandformConfig['InitialPlateSplitProb'] / len(plate_centers)):
                 avail = [c for c in self.cells if c.plate_id is None]
 
                 if len(avail) > 0:
@@ -477,99 +483,3 @@ class World(AbstractCellGroup):
                 if next_idx not in added:
                     queue.append( (next_idx, dist + 1) ) 
                     added.add( next_idx )
-
-    # def render(self, cities=[], cell_labels=False, color_boundaries=False, cell_elevation=False, tectonics=False, show_graph=False, outline_landforms=False, heightmap=False):
-    #     def paint_cell(cell_id, color):
-    #         '''
-    #         Fill the specified cell's region with the specified `color`. Supported colors are documented here:
-    #             https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.fill.html
-    #         '''
-    #         region = self.get_region(cell_id)
-
-    #         x = list( map(lambda p: p[0], region) )
-    #         y = list( map(lambda p: p[1], region) )
-    #         plt.fill(x, y, color)
-
-    #     voronoi_plot_2d(self.vor, show_vertices=False, show_points=False, line_width=0)
-    #     axes = plt.gca()
-
-    #     axes.set_xlim([0, 1])
-    #     axes.set_ylim([0, 1])
-
-    #     if cell_labels:
-    #         for cell in self.cells:
-    #             plt.text(cell.location[0], cell.location[1], cell.region_idx, fontsize=8)
-
-    #     if color_boundaries:
-    #         for cell in self.cells:
-    #             if cell.type == Cell.Type.WATER:
-    #                 paint_cell(cell.region_idx, '#0485d1')
-    #             if cell.type == Cell.Type.LAND:
-    #                 paint_cell(cell.region_idx, 'g')
-    #             if cell.type == Cell.Type.FIRE:
-    #                 paint_cell(cell.region_idx, 'red')
-
-    #     if cell_elevation:
-    #         color_sealevel = colour.Color('green')
-    #         color_peak = colour.Color('red')
-
-    #         num_colors = 25
-    #         gradient = list( color_sealevel.range_to(color_peak, num_colors) )
-
-    #         for cell in self.cells:
-    #             if cell.type == Cell.Type.LAND:
-    #                 color_idx = math.floor( cell.elevation / (1.0 / num_colors) )
-    #                 paint_cell(cell.region_idx, gradient[color_idx].hex)
-
-    #     if tectonics:
-    #         num_plates = len( set([c.plate_id for c in self.cells]) )
-
-    #         print('num_plates=%d' % (num_plates))
-    #         random_color = lambda: colour.rgb2hex( (random.random(), random.random(), random.random()) )
-    #         colors = [ random_color() for plate in range(num_plates) ]
-            
-    #         for cell in self.cells:
-    #             # self.paint_cell(cell.region_idx, colors[cell.plate_id])
-
-    #             plt.text(cell.location[0], cell.location[1], cell.plate_id, fontsize=8)
-
-    #     if show_graph:
-    #         for node in self.cells[0:100]:
-    #             for neighbor in node.neighbor_to:
-    #                 x = (node.location[0], neighbor.location[0])
-    #                 y = (node.location[1], neighbor.location[1])
-
-    #                 plt.plot(x, y, linestyle='dashed', color='red', linewidth=1)
-
-    #             plt.plot(node.location[0], node.location[1], 'bo')
-
-    #     if outline_landforms:
-    #         for continent in self.continents:
-    #             outlines = continent.outline()
-
-    #             for outline in outlines:
-    #                 x = (outline[0][0], outline[1][0])
-    #                 y = (outline[0][1], outline[1][1])
-
-    #                 plt.plot(x, y, '#222222', linewidth=1)
-
-    #     if heightmap:
-    #         grid = numpy.zeros((1000, 1000),)
-
-    #         for y in range(1000):
-    #             for x in range(1000):
-    #                 grid[x][y] = self._gen_noise(x / 1000.0, y / 1000.0)
-
-    #         grid = (255 * grid).astype('uint8')
-    #         img = Image.fromarray(grid, mode='L')
-    #         img.save('heightmap.png')
-
-    #     if len(cities) > 0:
-    #         for city in cities:
-    #             plt.plot(city.location[0], city.location[1], marker='o', markersize=3, color='red')
-
-    #     plt.title('Rendered world')
-
-    #     plt.savefig('world.png')
-    #     # plt.savefig('world-%s.png' % (self.id,))
-    #     # plt.show()
