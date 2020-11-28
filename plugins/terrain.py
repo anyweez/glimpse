@@ -33,7 +33,7 @@ def generate(world, vd):
         'base': random.randint(0, 1000)
     }
 
-    WaterlineHeight = (random.random() / 4.0) + 0.4 # range = [0.4, 0.65)
+    WaterlineHeight = (random.random() / 4.0) + 0.3 # range = [0.3, 0.55)
 
     world.set_param('WaterlineHeight', WaterlineHeight)
 

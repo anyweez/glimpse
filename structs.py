@@ -89,11 +89,11 @@ class AbstractCellGroup(object):
         # self.vor = vor
         self.graph = graph
 
-        max_region_idx = functools.reduce(
-            lambda best, next_idx: best if best > next_idx else next_idx, 
-            cell_idxs,
-            cell_idxs[0],
-        )
+        # max_region_idx = functools.reduce(
+        #     lambda best, next_idx: best if best > next_idx else next_idx, 
+        #     cell_idxs,
+        #     cell_idxs[0],
+        # )
 
         # self.available_cells = [None,] * max_region_idx
         self.vertex_count = {}
@@ -117,10 +117,11 @@ class AbstractCellGroup(object):
         return self.__cell_idxs
 
     def contains(self, region_idx):
-        if region_idx >= len(self.available_cells):
-            return False
+        return region_idx in self.available_cells
+        # if region_idx >= len(self.available_cells):
+        #     return False
 
-        return self.available_cells[region_idx] != None
+        # return self.available_cells[region_idx] != None
 
     # def get_region(self, region_idx):
     #     '''
@@ -135,25 +136,25 @@ class AbstractCellGroup(object):
 
     #     return list( map(lambda r: self.vor.vertices[r], self.vor.regions[region_idx]) )
 
-    def get_vertices(self, region_idx):
-        if -1 in self.vor.regions[region_idx]:
-            return []
+    # def get_vertices(self, region_idx):
+    #     if -1 in self.vor.regions[region_idx]:
+    #         return []
 
-        return self.vor.regions[region_idx]
+    #     return self.vor.regions[region_idx]
 
-    def get_cell(self, region_idx):
-        if isinstance(region_idx, Cell):
-            raise Exception('Provide a region_idx, not a Cell')
+    # def get_cell(self, region_idx):
+    #     if isinstance(region_idx, Cell):
+    #         raise Exception('Provide a region_idx, not a Cell')
 
-        if not self.contains(region_idx):
-            raise errors.InvalidCellError('Requested non-existant or out of scope cell #%d' % (region_idx,))
+    #     if not self.contains(region_idx):
+    #         raise errors.InvalidCellError('Requested non-existant or out of scope cell #%d' % (region_idx,))
 
-        return self.available_cells[region_idx]
+    #     return self.available_cells[region_idx]
 
     def get_cellcount(self):
         return len( list(self.cell_idxs()) )
 
-    def get_cells(self, region_idxs):
+    # def get_cells(self, region_idxs):
         # NOTE TO FUTURE SELF: I'm intentionally deciding that this function should only
         # return the cells that exist in scope. I'm running into an issue where the graph
         # is aware of all worldwide cells but worldregions only have access to certain cells.
@@ -162,7 +163,7 @@ class AbstractCellGroup(object):
         # on cells outside of their scope so I think its safe to make this decision. I have
         # a troubling feeling that not providing any notification is going to generate nasty
         # bugs, though.
-        return [self.available_cells[idx] for idx in region_idxs if self.contains(idx)]
+        # return [self.available_cells[idx] for idx in region_idxs if self.contains(idx)]
 
     # def outline(self):
     #     ridges = []
@@ -186,69 +187,69 @@ class WorldRegion(AbstractCellGroup):
     def __init__(self, cells, vor, graph):  
         super().__init__(cells, vor, graph)
 
-    def watershed(self):
-        '''
-        Create lakes in low 'bowls' where water runs downhill and doesn't have a way to get out to an
-        ocean. Simulate rainfall and fill areas at the bottom of the hill.
-        '''
+    # def watershed(self):
+    #     '''
+    #     Create lakes in low 'bowls' where water runs downhill and doesn't have a way to get out to an
+    #     ocean. Simulate rainfall and fill areas at the bottom of the hill.
+    #     '''
 
-        water_depth = {}
+    #     water_depth = {}
 
-        for cell in self.cells:
-            water_depth[cell.region_idx] = 0
+    #     for cell in self.cells:
+    #         water_depth[cell.region_idx] = 0
 
-        # Find the cell with the lowest elevation out of a list of cells
-        def lowest_cell(all_cells):
-            return functools.reduce(lambda a, b: a if a.elevation < b.elevation else b, all_cells, all_cells[0])
+    #     # Find the cell with the lowest elevation out of a list of cells
+    #     def lowest_cell(all_cells):
+    #         return functools.reduce(lambda a, b: a if a.elevation < b.elevation else b, all_cells, all_cells[0])
 
-        # For each land cell, visit neighbors @ lower elevations until you reach water or don't have
-        # neighbors @ lower elevation. If you reach water, end with no side-effects. If you reach a
-        # bowl, increase water depth by one.
-        for current_cell in [c for c in self.cells if c.type == Cell.Type.LAND]:
-            neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
+    #     # For each land cell, visit neighbors @ lower elevations until you reach water or don't have
+    #     # neighbors @ lower elevation. If you reach water, end with no side-effects. If you reach a
+    #     # bowl, increase water depth by one.
+    #     for current_cell in [c for c in self.cells if c.type == Cell.Type.LAND]:
+    #         neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
 
-            if len(neighbors) > 0:
-                next_cell = lowest_cell(neighbors)
+    #         if len(neighbors) > 0:
+    #             next_cell = lowest_cell(neighbors)
 
-                # Keep flowing while 
-                while next_cell.elevation < current_cell.elevation:
-                    current_cell = next_cell
+    #             # Keep flowing while 
+    #             while next_cell.elevation < current_cell.elevation:
+    #                 current_cell = next_cell
 
-                    neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
-                    next_cell = lowest_cell(neighbors)
+    #                 neighbors = self.get_cells( self.graph.neighbors(current_cell.region_idx) )
+    #                 next_cell = lowest_cell(neighbors)
 
-                    # If we've hit a cell that's already water, finish.
-                    if next_cell.type == Cell.Type.WATER:
-                        break
+    #                 # If we've hit a cell that's already water, finish.
+    #                 if next_cell.type == Cell.Type.WATER:
+    #                     break
                 
-                # If we ended on land, increase water depth.
-                if next_cell.type == Cell.Type.LAND:
-                    water_depth[next_cell.region_idx] += 1
+    #             # If we ended on land, increase water depth.
+    #             if next_cell.type == Cell.Type.LAND:
+    #                 water_depth[next_cell.region_idx] += 1
 
-        # Convert cells to water if enough water has pooled up. If the pool is big enough, start
-        # filling up surrounding cells as well.
-        for (region_idx, depth) in water_depth.items():
-            if depth > 5:
-                cell = self.get_cell(region_idx)
-                cell.type = Cell.Type.WATER
+    #     # Convert cells to water if enough water has pooled up. If the pool is big enough, start
+    #     # filling up surrounding cells as well.
+    #     for (region_idx, depth) in water_depth.items():
+    #         if depth > 5:
+    #             cell = self.get_cell(region_idx)
+    #             cell.type = Cell.Type.WATER
 
-                pool = [cell,]
+    #             pool = [cell,]
 
-                # If we've over-filled a cell, flow into the next lowest cell connected to the pool.
-                # Each time the pool expands, future expansions can go into the neighboring LAND cells
-                # connected to any part of the pool. The lowest elevation cell will always be selected.
-                for _ in range( math.floor(depth / 10) ):
-                    neighbors = []
-                    for c in pool:
-                        for neighbor in [n for n in self.get_cells( self.graph.neighbors(c.region_idx) ) if n.type == Cell.Type.LAND]:
-                            neighbors.append(neighbor)
+    #             # If we've over-filled a cell, flow into the next lowest cell connected to the pool.
+    #             # Each time the pool expands, future expansions can go into the neighboring LAND cells
+    #             # connected to any part of the pool. The lowest elevation cell will always be selected.
+    #             for _ in range( math.floor(depth / 10) ):
+    #                 neighbors = []
+    #                 for c in pool:
+    #                     for neighbor in [n for n in self.get_cells( self.graph.neighbors(c.region_idx) ) if n.type == Cell.Type.LAND]:
+    #                         neighbors.append(neighbor)
     
-                    # Its rare but possible that a cell won't have any LAND neighbors, which causes a crash without this check.
-                    if len(neighbors) > 0:
-                        lowest = lowest_cell(neighbors)
+    #                 # Its rare but possible that a cell won't have any LAND neighbors, which causes a crash without this check.
+    #                 if len(neighbors) > 0:
+    #                     lowest = lowest_cell(neighbors)
 
-                        lowest.type = Cell.Type.WATER
-                        pool.append(lowest)
+    #                     lowest.type = Cell.Type.WATER
+    #                     pool.append(lowest)
 
     '''
     Check whether the specified region is on the 'border' of the region. A cell is on the border if
@@ -265,9 +266,9 @@ class WorldRegion(AbstractCellGroup):
         
         return False
 
-class Landform(AbstractCellGroup):
-    def __init__(self, cells, vor, graph):
-        super().__init__(cells, vor, graph)
+# class Landform(AbstractCellGroup):
+#     def __init__(self, cells, vor, graph):
+#         super().__init__(cells, vor, graph)
 
 class World(AbstractCellGroup):
     '''
@@ -281,6 +282,9 @@ class World(AbstractCellGroup):
 
     # Definition of what these are here:
     # http://libnoise.sourceforge.net/glossary/
+
+    StandardDensityCellCount = 3500
+
     NoiseConfig = {
         'scale': 2.5,           # top tweak
         'octaves': 5,
@@ -313,15 +317,24 @@ class World(AbstractCellGroup):
             return numpy.array(default_value, dtype=dtype)
 
         if default_value is not None:
-            return numpy.full(self.get_cellcount() + 1, default_value, dtype=dtype)
+            return numpy.full(self.get_cellcount(), default_value, dtype=dtype)
 
-        return numpy.array(self.get_cellcount() + 1, dtype=dtype)
+        return numpy.array(self.get_cellcount(), dtype=dtype)
 
     def set_param(self, name, value):
         self.worldparams[name] = value
     
     def get_param(self, name):
         return self.worldparams[name]
+
+    def std_density(self, num):
+        '''
+        Returns a number that's adjusted for the number of cells in the world. The number
+        is scaled up from 'standard density' (n=3500).
+        '''
+        ratio = len( self.cell_idxs() ) / World.StandardDensityCellCount
+
+        return num * ratio
 
     # def CreateRegion(self, cells):
     #     if self.graph is None:

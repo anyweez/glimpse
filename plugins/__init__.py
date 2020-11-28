@@ -1,1 +1,1 @@
-from plugins import init_cells, tectonics, terrain, mark_landforms
+from plugins import init_cells, tectonics, terrain, mark_landforms, form_lakes, forest

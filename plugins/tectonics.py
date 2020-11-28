@@ -14,6 +14,10 @@ def generate(world, vd):
         'InitialContinentMax': random.randint(3, 8),
     }
 
+    world.set_param('InitialPlateSplitProb', LandformConfig['InitialPlateSplitProb'])
+    world.set_param('InitialContinentMin', LandformConfig['InitialContinentMin'])
+    world.set_param('InitialContinentMax', LandformConfig['InitialContinentMax'])
+
     num_plates = random.randint(
         LandformConfig['InitialContinentMin'], 
         LandformConfig['InitialContinentMax'], 

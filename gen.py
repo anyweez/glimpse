@@ -1,5 +1,5 @@
-import random, structs, numpy, datetime, sys, multiprocessing, pprint
-import voronoi, civilization, graph, renderer, forest, poi, cultures, river
+import random, structs, numpy, datetime, sys, multiprocessing, pprint, pkgutil
+import voronoi, civilization, graph, renderer, poi, cultures, river
 # import languages
 
 import plugins
@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 2500
+PointCount = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14
@@ -26,6 +26,11 @@ def generate(world_idx, language_list):
 
     # def render_world(world, stack):
     #     pass
+
+    # From https://packaging.python.org/guides/creating-and-discovering-plugins/#using-namespace-packages
+    # p = pkgutil.iter_modules(plugins.__path__, plugins.__name__ + '.')
+    # for pl in p:
+    #     print(pl)
 
     points = numpy.array(point_cloud(PointCount))
     vor = voronoi.generate(points)
@@ -45,6 +50,8 @@ def generate(world_idx, language_list):
         plugins.init_cells,
         plugins.tectonics,
         plugins.terrain,
+        plugins.form_lakes,
+        plugins.forest,
         plugins.mark_landforms,
     ]
 

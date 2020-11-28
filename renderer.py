@@ -64,9 +64,9 @@ def draw_city(ctx, city):
 
     ctx.stroke()
 
-def draw_tree(ctx, point):
+def draw_tree(ctx, top):
     tree_height = 0.015
-    top = transform(point)
+    # top = transform(point)
 
     top = (top[0], top[1] - tree_height)
 
@@ -382,6 +382,13 @@ def simple_render(world, vd, opts):
                 end = transform(outline[1])
 
                 draw_outline(ctx, start, end)
+
+        for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
+            cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+
+            for idx in cell_idxs:
+                pt = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
+                draw_tree(ctx, pt)
 
         # graph sample
         # for idx in random.choices(world.cell_idxs(), k=10):
