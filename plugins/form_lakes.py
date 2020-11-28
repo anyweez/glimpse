@@ -1,7 +1,7 @@
 import numpy, functools, math
 
 from decorators import genreq
-from structs import Cell
+from world import Cell
 
 @genreq(cellprops=['celltype', 'elevation'])
 def generate(world, vd):

@@ -1,7 +1,7 @@
 import enum, cairo, colour, math, random, json, functools, numpy
 
 import xml.etree.ElementTree as ET
-from structs import Cell
+from world import Cell
 
 class RenderOptions(object):
     CellColorMode = enum.Enum('CellColorMode', 'ELEVATION')
@@ -110,6 +110,9 @@ class FullColorTheme(Theme):
     WaterDeep       = rgba(3, 119, 188)
     WaterRiver      = rgba(0, 96, 152)
     WaterShore      = rgba(0, 7, 12)
+
+    CityFill        = rgba(255, 255, 255)
+    CityBorder      = rgba(0, 0, 0)
     
     @staticmethod
     def add_alpha(colors):
@@ -365,10 +368,12 @@ def simple_render(world, vd, opts):
             color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradient) )
             draw_region(ctx, region, gradient[color_idx])
 
-        # Draw entities
-        # TODO: entities will need to be render-able at different points
+        # Draw entities (stage 1)
         for entity in world.entities():
-            entity.render(ctx, world, vd, theme)
+            try:
+                entity.render_stage1(ctx, world, vd, theme)
+            except NotImplementedError:
+                pass
 
         # Draw water
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
@@ -397,6 +402,14 @@ def simple_render(world, vd, opts):
             for idx in cell_idxs:
                 pt = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
                 draw_tree(ctx, pt)
+
+        # Draw entities (stage 2)
+        for entity in world.entities():
+            try:
+                entity.render_stage2(ctx, world, vd, theme)
+            except NotImplementedError:
+                pass
+
 
         # graph sample
         # for idx in random.choices(world.cell_idxs(), k=10):

@@ -1,4 +1,4 @@
-import random, structs, numpy, datetime, sys, multiprocessing, pprint, pkgutil, importlib, time
+import random, world, numpy, datetime, sys, multiprocessing, pprint, pkgutil, importlib, time
 import voronoi, civilization, graph, renderer, poi, cultures
 # import languages
 
@@ -84,26 +84,16 @@ def generate(world_idx, language_list):
 
     worldgraph = graph.BuildGraph(cell_idxs, vor, cell_mapping)
 
-    world = structs.World(cell_idxs, vor, worldgraph)
-    vd = structs.VoronoiDiagram(vor, cell_mapping)
+    w = world.World(cell_idxs, vor, worldgraph)
+    vd = voronoi.VoronoiDiagram(vor, cell_mapping)
 
     render_stack = []
     
     # Generate the world
-    print('  [%s] Generating world #%d...' % (world.id, world_idx + 1))
-    generate_world(world, vd)
+    print('  [%s] Generating world #%d...' % (w.id, world_idx + 1))
+    generate_world(w, vd)
 
-    # print( 'World params: %s' % (str(world.__worldparams)) )
-
-    # Render the world
-    # render_world(world, render_stack)
-
-    ###
-
-
-    # world.build()
-
-    print('  [%s] Establishing civilization...' % (world.id,))
+    # print('  [%s] Establishing civilization...' % (world.id,))
 
     # Eventually we can represent multiple cultures; for now this is a single world-wide culture.
     # english = [lang for lang in language_list if lang.name == 'english'][0]
@@ -114,18 +104,6 @@ def generate(world_idx, language_list):
     #     city = civilization.PlaceCity(world, first_culture, cities)
 
     #     cities.append(city)
-    
-    # print('  [%s] Growing forests...' % (world.id,))
-
-    # forests = []
-    # for _ in range(NumForests):
-    #     f = forest.PlaceForest(world, forests)
-
-    #     forests.append(f)
-
-    ## Generate rivers
-    # print('  [%s] Forming rivers...' % (world.id,))
-    # rivers = river.FormRivers(world)
 
     ## Find points of interest
     # print('  [%s] Identifying points of interest...' % (world.id,))
@@ -144,14 +122,14 @@ def generate(world_idx, language_list):
     # pprint.pprint(names)
 
     ## Render
-    print('  [%s] Rendering world...' % (world.id,))
+    print('  [%s] Rendering world...' % (w.id,))
 
     # Render 'clean' map without POIs
     render_opts = renderer.RenderOptions()
     render_opts.filename = 'plugin-test.png'
     # render_opts.filename = 'world-%s.png' % (world.id,)
 
-    renderer.simple_render(world, vd, render_opts)
+    renderer.simple_render(w, vd, render_opts)
 
     # renderer.render(
     #     world, 

@@ -16,23 +16,6 @@ def generate(world, vd):
     voronoi_idx = world.new_cp_array(numpy.uint32, v_idxs)
 
     world.add_cell_property('voronoi_idx', voronoi_idx)
-    
-
-    # boundary_arr = numpy.zeros(world.get_cellcount(), dtype=numpy.bool_)
-
-    # for region_idx in world.cell_idxs():
-    #     region = vd.get_region(region_idx)
-
-    #     if region == []:
-    #         boundary_arr[region_idx] = True
-    #     else:
-    #         for (x, y) in region:
-    #             if x > 1.0 or x < 0.0:
-    #                 boundary_arr[region_idx] = True
-    #             if y > 1.0 or y < 0.0:
-    #                 boundary_arr[region_idx] = True
-
-    # world.add_cell_property('boundary', boundary_arr)
 
     # Add latitude and longitude from the Voronoi diagram
     latitude_arr = numpy.full(world.get_cellcount(), -1, dtype=numpy.double)

@@ -1,6 +1,6 @@
 import numpy
 
-from structs import Cell
+from world import Cell
 from decorators import genreq
 
 @genreq(cellprops=['celltype',])

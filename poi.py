@@ -1,9 +1,9 @@
 import enum
-import structs
+import world
 
-from structs import Cell
+from world import Cell
 
-class PointOfInterest(structs.AbstractCellGroup):
+class PointOfInterest(world.AbstractCellGroup):
     Type = enum.Enum('POIType', 'LAKE MOUNTAIN')
 
     def __init__(self, cells, vor, graph, poi_type):

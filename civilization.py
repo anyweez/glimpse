@@ -1,7 +1,7 @@
 import random
 import graph
 
-from structs import Cell
+from world import Cell
 
 class City(object):
     def __init__(self, cell):

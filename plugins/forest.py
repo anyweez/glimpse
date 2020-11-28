@@ -1,11 +1,12 @@
 import numpy, random, functools
 
 from decorators import genreq
-from structs import Cell
+from world import Cell
 
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
+# FIXME: forest generation needs to run after lake generation
 @genreq(cellprops=['celltype', 'elevation'])
 def generate(world, vd):
     '''

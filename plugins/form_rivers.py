@@ -1,7 +1,7 @@
 import functools, numpy
 
 from entity import Entity
-from structs import Cell
+from world import Cell
 from graph import Graph
 
 from decorators import genreq
@@ -10,7 +10,7 @@ class River(Entity):
     def __init__(self, graph):
         super().__init__(graph)
 
-    def render(self, ctx, world, vd, theme):
+    def render_stage1(self, ctx, world, vd, theme):
         def draw_line_between(ctx, src, dest, color, linewidth=0.003):
             ctx.set_source_rgba(*color)
 

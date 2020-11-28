@@ -2,7 +2,7 @@ import random, numpy
 
 from noise import snoise2
 
-from structs import Cell
+from world import Cell
 from decorators import genreq
 
 def __gen_noise(x, y, config):
@@ -27,6 +27,8 @@ def generate(world, vd):
     2) Mark all cells as either 'land' or 'water'
     '''
 
+    # Definition of what these are here:
+    # http://libnoise.sourceforge.net/glossary/
     NoiseConfig = {
         'scale': 4.5,           # top tweak
         'octaves': 5,
