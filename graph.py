@@ -101,7 +101,7 @@ class Graph(object):
 
         return [ v.index for v in self.ig.bfsiter(int(region_idx)) ]
 
-def BuildGraph(cells, vor):
+def BuildGraph(cell_idxs, vor, mapping):
     '''
     Build a graph connecting cells that share vertices.
     '''
@@ -111,18 +111,21 @@ def BuildGraph(cells, vor):
     regions_by_vertex = {}
 
     # List all regions that share each vertex
-    for cell in cells:
-        for vertex in vor.regions[cell.region_idx]:
+    for cell_idx in cell_idxs:
+        v_idx = mapping[cell_idx]
+
+        for vertex in vor.regions[v_idx]:
             if vertex not in regions_by_vertex:
                 regions_by_vertex[vertex] = []
 
-            regions_by_vertex[vertex].append(cell.region_idx)
+            regions_by_vertex[vertex].append(cell_idx)
 
     # Run through list of vertices and build edges between all connected regions
-    for (_, region_idxs) in regions_by_vertex.items():
-        for source in region_idxs:
-            for dest in region_idxs:
+    for (_, cell_idxs) in regions_by_vertex.items():
+        for source in cell_idxs:
+            for dest in cell_idxs:
                 if source != dest:
+                    # print('%d -> %d' % (source, dest))
                     edges.append( (source, dest) )
                     edges.append( (dest, source) )
 

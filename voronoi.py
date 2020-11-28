@@ -2,6 +2,44 @@ import numpy
 
 from scipy.spatial import Voronoi
 
+class VoronoiDiagram(object):
+    def __init__(self, vor, mapping):
+        self.vor = vor
+        self.mapping = mapping # cell_idx => voronoi_idx
+
+    def get_region(self, cell_idx):
+        '''
+        Get the polygon that defines the region for the specified cell_id/region_id.
+        Returns a list of 2D points, or an empty list if the region isn't defined within
+        the Voronoi diagram; see more about when this happens here:
+
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.Voronoi.html
+        '''
+        v_idx = self.mapping[cell_idx]
+
+        if -1 in self.vor.regions[v_idx]:
+            return []
+
+        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )       
+
+    def outline(self, cell_idxs):
+        ridges = []
+
+        '''
+        get all allowed regions
+        for all ridge vertices
+            check if ridge is in exactly one region
+        '''
+        supported_regions = list( map(lambda idx: self.vor.regions[self.mapping[idx]], cell_idxs) )
+
+        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
+
+        for ridge in self.vor.ridge_vertices:
+            if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
+                ridges.append(ridge)
+
+        return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
+
 def generate(points, n_smooth=3):
     vor = None
 
