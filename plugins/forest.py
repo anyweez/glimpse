@@ -1,10 +1,12 @@
 import numpy, random, functools
 
+from decorators import genreq
 from structs import Cell
 
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
+@genreq(cellprops=['celltype', 'elevation'])
 def generate(world, vd):
     '''
     Generate a series of forests across the map.

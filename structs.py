@@ -336,6 +336,9 @@ class World(AbstractCellGroup):
     
     def get_param(self, name):
         return self.__worldparams[name]
+    
+    def list_params(self):
+        return list( self.__worldparams.keys() )
 
     def std_density(self, num):
         '''

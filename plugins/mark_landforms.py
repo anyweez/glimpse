@@ -1,7 +1,9 @@
 import numpy
 
 from structs import Cell
+from decorators import genreq
 
+@genreq(cellprops=['celltype',])
 def generate(world, vd):
     Unassigned = -1
     next_landform_id = 0

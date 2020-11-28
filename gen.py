@@ -1,5 +1,5 @@
-import random, structs, numpy, datetime, sys, multiprocessing, pprint, pkgutil
-import voronoi, civilization, graph, renderer, poi, cultures, river
+import random, structs, numpy, datetime, sys, multiprocessing, pprint, pkgutil, importlib, time
+import voronoi, civilization, graph, renderer, poi, cultures
 # import languages
 
 import plugins
@@ -17,20 +17,62 @@ def generate(world_idx, language_list):
     def point_cloud(n):
         return [(random.random(), random.random()) for _ in range(n)]
 
-    # def initialize_plugins(world, stack):
-    #     pass
+    def generate_world(world, vd):
+        available_cellprops = []
+        available_worldparams = []
 
-    def generate_world(world, vd, stack):
-        for plugin in stack:
-            plugin.generate(world, vd)
+        def is_ready(plugin):
+            '''
+            Determine whether all pre-requisites are satisfied. If yes, its safe to run this plugin
+            given the current state of the world.
+            '''
+            genfunc = plugin.generate
 
-    # def render_world(world, stack):
-    #     pass
+            if hasattr(genfunc, 'cellprops'):
+                for cp in genfunc.cellprops:
+                    if cp not in available_cellprops:
+                        return False
 
-    # From https://packaging.python.org/guides/creating-and-discovering-plugins/#using-namespace-packages
-    # p = pkgutil.iter_modules(plugins.__path__, plugins.__name__ + '.')
-    # for pl in p:
-    #     print(pl)
+            if hasattr(genfunc, 'worldparams'):
+                for wp in genfunc.worldparams:
+                    if wp not in available_worldparams:
+                        return False
+
+            return True
+
+        def all_plugins():
+            '''
+            Dynamically load all plugins from the `plugins/` directory.
+            '''
+            plugin_list = pkgutil.iter_modules(plugins.__path__, plugins.__name__ + '.')
+            
+            modules = []
+            for _, name, __ in plugin_list:
+                pl = importlib.import_module(name)
+                modules.append(pl)
+            
+            return modules
+
+        plugin_queue = all_plugins()
+        plugin_count = len(plugin_queue)
+
+        while len(plugin_queue) > 0:
+            available_plugins = list( filter(is_ready, plugin_queue) )
+
+            for pl in available_plugins:
+                print('   * [%d / %d] Running %s...\t' % (plugin_count - len(plugin_queue) + 1, plugin_count, pl.__name__), end='', flush=True)
+
+                start_ts = time.time() * 1000
+                pl.generate(world, vd)
+                end_ts = time.time() * 1000
+
+                print( '[%.1fms]' % (round(end_ts - start_ts, 1)) )
+
+                # Once run, remove the plugin from the queue
+                plugin_queue.remove(pl)
+            
+            available_cellprops = list( map(lambda k: k[3:], filter(lambda k: k.startswith('cp_'), world.__dict__.keys())) )
+            available_worldparams = world.list_params()
 
     points = numpy.array(point_cloud(PointCount))
     vor = voronoi.generate(points)
@@ -45,23 +87,11 @@ def generate(world_idx, language_list):
     world = structs.World(cell_idxs, vor, worldgraph)
     vd = structs.VoronoiDiagram(vor, cell_mapping)
 
-    ###
-    gen_stack = [
-        plugins.init_cells,
-        plugins.tectonics,
-        plugins.terrain,
-        plugins.form_lakes,
-        plugins.forest,
-        plugins.mark_landforms,
-        plugins.form_rivers,
-    ]
-
     render_stack = []
     
-    # Initialize all plugins
-    # initialize_plugins(world, gen_stack)
     # Generate the world
-    generate_world(world, vd, gen_stack)
+    print('  [%s] Generating world #%d...' % (world.id, world_idx + 1))
+    generate_world(world, vd)
 
     # print( 'World params: %s' % (str(world.__worldparams)) )
 
@@ -70,7 +100,6 @@ def generate(world_idx, language_list):
 
     ###
 
-    print('  [%s] Generating world #%d...' % (world.id, world_idx + 1))
 
     # world.build()
 

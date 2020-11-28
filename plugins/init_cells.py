@@ -1,8 +1,8 @@
 import numpy
 
-# def init(world):
-    # Add a boolean property that marks True/False whether a cell is a map boundary
+from decorators import genreq
 
+@genreq(cellprops=[])
 def generate(world, vd):
     '''
     Mark boundary cells and assign latitude/longitude to each cell from Voronoi diagram.
@@ -48,7 +48,3 @@ def generate(world, vd):
 
     world.add_cell_property('latitude', latitude_arr)
     world.add_cell_property('longitude', longitude_arr)
-
-
-# def render(world):
-#     pass

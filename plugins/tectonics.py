@@ -1,6 +1,8 @@
 import numpy, random
 
+from decorators import genreq
 
+@genreq(cellprops=[])
 def generate(world, vd):
     Unassigned = -1
 

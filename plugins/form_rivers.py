@@ -4,6 +4,8 @@ from entity import Entity
 from structs import Cell
 from graph import Graph
 
+from decorators import genreq
+
 class River(Entity):
     def __init__(self, graph):
         super().__init__(graph)
@@ -32,6 +34,7 @@ class River(Entity):
 
             draw_line_between(ctx, src_pt, dest_pt, theme.WaterRiver, 0.002)
 
+@genreq(cellprops=['celltype', 'elevation', 'latitude', 'longitude'])
 def generate(world, vd):
     MinFlowThreshold = world.std_density(10)
     MinRiverLength = world.std_density(5)

@@ -1,7 +1,9 @@
 import numpy, functools, math
 
+from decorators import genreq
 from structs import Cell
 
+@genreq(cellprops=['celltype', 'elevation'])
 def generate(world, vd):
     '''
     Create lakes in low 'bowls' where water runs downhill and doesn't have a way to get out to an

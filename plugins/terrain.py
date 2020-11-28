@@ -3,6 +3,7 @@ import random, numpy
 from noise import snoise2
 
 from structs import Cell
+from decorators import genreq
 
 def __gen_noise(x, y, config):
     scaled_x = x / config['scale']
@@ -17,6 +18,7 @@ def __gen_noise(x, y, config):
     return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
 
 
+@genreq(cellprops=['latitude', 'longitude'])
 def generate(world, vd):
     '''
     This plugin has two functions:
