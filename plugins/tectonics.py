@@ -4,6 +4,8 @@ from decorators import genreq
 
 @genreq(cellprops=[])
 def generate(world, vd):
+    # return
+
     Unassigned = -1
 
     # All cells start off with a plate_id of -1 (unassigned)

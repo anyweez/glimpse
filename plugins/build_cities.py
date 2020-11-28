@@ -29,11 +29,10 @@ class City(Entity):
 @genreq(cellprops=['elevation', 'celltype'])
 def generate(world, vd):
     SampleSize = 25
-    # TODO: make city count dynamic
     CityCount = random.randint(5, 18)
 
     cultures = [
-        HumanCulture(None, world), # Target: HumanCulture(lang)
+        HumanCulture(None, world),
     ]
     cities = []
 
