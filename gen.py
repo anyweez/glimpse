@@ -53,6 +53,7 @@ def generate(world_idx, language_list):
         plugins.form_lakes,
         plugins.forest,
         plugins.mark_landforms,
+        plugins.form_rivers,
     ]
 
     render_stack = []
@@ -62,7 +63,7 @@ def generate(world_idx, language_list):
     # Generate the world
     generate_world(world, vd, gen_stack)
 
-    print( 'World params: %s' % (str(world.worldparams)) )
+    # print( 'World params: %s' % (str(world.__worldparams)) )
 
     # Render the world
     # render_world(world, render_stack)

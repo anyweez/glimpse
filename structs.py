@@ -4,6 +4,7 @@ import errors
 
 from scipy.spatial import voronoi_plot_2d
 from PIL import Image
+from entity import Entity
 from noise import snoise2
 
 class VoronoiDiagram(object):
@@ -272,9 +273,17 @@ class WorldRegion(AbstractCellGroup):
 
 class World(AbstractCellGroup):
     '''
-    Worlds contain a series of Cells, and store the Voronoi diagram used to define the region
-    and position of each. Worlds also include much of the logic for world generation and any 
-    configuration variables needed to do so.
+    A World is a container for most of the procedural state related to a generated world.
+    Worlds are composed of three different types of state, all of which can be modified by plugins.
+
+    1) Cell properties, i.e. elevation and cell type. A cell property is a single value per cell and is
+    directly related to the cell.
+    2) World params, i.e. water level. These are 'global' values generated over the course of the
+    simulation.
+    3) Entities, i.e. cities and rivers.
+
+    Worlds do NOT represent the spatial characteristics of cells (VoronoiDiagrams do this) or the
+    relationships between cells (Graphs do this).
     '''
 
     # Currently worldwide configuration so elevation looks smooth across nearby landforms and (eventually)
@@ -285,13 +294,13 @@ class World(AbstractCellGroup):
 
     StandardDensityCellCount = 3500
 
-    NoiseConfig = {
-        'scale': 2.5,           # top tweak
-        'octaves': 5,
-        'persistence': 4.5,
-        'lacunarity': 2.0,
-        'base': random.randint(0, 1000)
-    }
+    # NoiseConfig = {
+    #     'scale': 2.5,           # top tweak
+    #     'octaves': 5,
+    #     'persistence': 4.5,
+    #     'lacunarity': 2.0,
+    #     'base': random.randint(0, 1000)
+    # }
 
     def __init__(self, cells, vor, graph):
         super().__init__(cells, vor, graph)
@@ -299,13 +308,14 @@ class World(AbstractCellGroup):
         self.continents = []
         self.id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-        self.LandformConfig = {
-            'InitialPlateSplitProb': random.random() / 50.0, # [0, .02]
-            'InitialContinentMin': random.randint(1, 3),
-            'InitialContinentMax': random.randint(3, 8),
-        }
+        # self.LandformConfig = {
+        #     'InitialPlateSplitProb': random.random() / 50.0, # [0, .02]
+        #     'InitialContinentMin': random.randint(1, 3),
+        #     'InitialContinentMax': random.randint(3, 8),
+        # }
 
-        self.worldparams = {}
+        self.__worldparams = {}
+        self.__entities = []
         # Cell properties; added with plugins
         # self.__cp = {}
 
@@ -322,10 +332,10 @@ class World(AbstractCellGroup):
         return numpy.array(self.get_cellcount(), dtype=dtype)
 
     def set_param(self, name, value):
-        self.worldparams[name] = value
+        self.__worldparams[name] = value
     
     def get_param(self, name):
-        return self.worldparams[name]
+        return self.__worldparams[name]
 
     def std_density(self, num):
         '''
@@ -335,6 +345,15 @@ class World(AbstractCellGroup):
         ratio = len( self.cell_idxs() ) / World.StandardDensityCellCount
 
         return num * ratio
+
+    def add_entity(self, entity):
+        if isinstance(entity, Entity):
+            self.__entities.append(entity)
+        else:
+            raise Exception( 'Trying to add non-Entity: %s' % (type(entity),) )
+
+    def entities(self):
+        return self.__entities
 
     # def CreateRegion(self, cells):
     #     if self.graph is None:
@@ -510,7 +529,7 @@ class World(AbstractCellGroup):
     #     # and is assigned randomly. Regions with smaller dampener values will tend to be
     #     # flatter.
     #     #
-    #     # TODO: improve this -- really cool effect but did this in 30 seconds
+    #     # TODO: improve this really cool effect (did this in 30 seconds)
     #     dampener = random.choice([0.4, 0.4, 0.6, 1.0])
 
     #     for cell in region.cells:

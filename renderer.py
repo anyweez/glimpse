@@ -355,22 +355,29 @@ def simple_render(world, vd, opts):
 
         land_elevation_range = 1.0 - world.get_param('WaterlineHeight')
 
-        # Draw land and water
-        for idx in world.cell_idxs():
+        # Draw land
+        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
             region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
 
-            if world.cp_celltype[idx] == Cell.Type.WATER:
-                if world.cp_elevation[idx] < world.get_param('WaterlineHeight') / 2.0:
-                    draw_region(ctx, region, FullColorTheme.WaterDeep)
-                else:
-                    draw_region(ctx, region, FullColorTheme.WaterShallow)
+            # How far is this cell above sea level?
+            distance_above_water = world.cp_elevation[idx] - world.get_param('WaterlineHeight')
 
+            color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradient) )
+            draw_region(ctx, region, gradient[color_idx])
+
+        # Draw entities
+        # TODO: entities will need to be render-able at different points
+        for entity in world.entities():
+            entity.render(ctx, world, vd, theme)
+
+        # Draw water
+        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
+            region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
+
+            if world.cp_elevation[idx] < world.get_param('WaterlineHeight') / 2.0:
+                draw_region(ctx, region, FullColorTheme.WaterDeep)
             else:
-                # How far is this cell above sea level?
-                distance_above_water = world.cp_elevation[idx] - world.get_param('WaterlineHeight')
-
-                color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradient) )
-                draw_region(ctx, region, gradient[color_idx])
+                draw_region(ctx, region, FullColorTheme.WaterShallow)
 
         # Draw outlines
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
@@ -383,6 +390,7 @@ def simple_render(world, vd, opts):
 
                 draw_outline(ctx, start, end)
 
+        # Draw forests
         for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
             cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
 
