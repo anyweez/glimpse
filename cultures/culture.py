@@ -1,8 +1,3 @@
-import random
-import world, civilization
-
-from poi import PointOfInterest
-
 class Culture(object):
     '''
     Cultures are responsible for the logic related to decisions for intelligent life, i.e. how things are

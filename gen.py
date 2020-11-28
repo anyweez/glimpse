@@ -1,5 +1,5 @@
-import random, world, numpy, datetime, sys, multiprocessing, pprint, pkgutil, importlib, time
-import voronoi, civilization, graph, renderer, poi, cultures
+import datetime, random, sys, numpy, pkgutil, importlib, time
+import voronoi, graph, renderer, world
 # import languages
 
 import plugins
@@ -86,40 +86,10 @@ def generate(world_idx, language_list):
 
     w = world.World(cell_idxs, vor, worldgraph)
     vd = voronoi.VoronoiDiagram(vor, cell_mapping)
-
-    render_stack = []
     
     # Generate the world
     print('  [%s] Generating world #%d...' % (w.id, world_idx + 1))
     generate_world(w, vd)
-
-    # print('  [%s] Establishing civilization...' % (world.id,))
-
-    # Eventually we can represent multiple cultures; for now this is a single world-wide culture.
-    # english = [lang for lang in language_list if lang.name == 'english'][0]
-    # first_culture = cultures.HumanCulture(world.cells, world.vor, world.graph, english)
- 
-    # cities = []
-    # for _ in range(NumCities):
-    #     city = civilization.PlaceCity(world, first_culture, cities)
-
-    #     cities.append(city)
-
-    ## Find points of interest
-    # print('  [%s] Identifying points of interest...' % (world.id,))
-    # poi_lib = poi.DetectAll(world)
-
-    ## Generate names
-    # names = {}
-
-    # for city in cities:
-    #     names[city] = first_culture.name_place(city)
-
-    # for poi_type in poi_lib.list_types():
-    #     for poi_inst in poi_lib.get_type(poi_type):
-    #         names[poi_inst] = first_culture.name_place(poi_inst)
-
-    # pprint.pprint(names)
 
     ## Render
     print('  [%s] Rendering world...' % (w.id,))
