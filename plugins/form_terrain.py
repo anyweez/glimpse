@@ -5,6 +5,8 @@ from noise import snoise2
 from world import Cell
 from decorators import genreq
 
+# seed = random.randint(0, 1000)
+
 def __gen_noise(x, y, config):
     scaled_x = x / config['scale']
     scaled_y = y / config['scale']
@@ -29,7 +31,6 @@ def cap(val, low, high):
     
     return val
 
-# Return (-1, 1)
 def pe_converge(self_elev, target_elev, dist):
     goal_elev = max(self_elev, target_elev) + 0.1
     return goal_elev / dist
@@ -54,32 +55,33 @@ def generate(world, vd):
     # Definition of what these are here:
     # http://libnoise.sourceforge.net/glossary/
     NoiseConfig = {
-        'scale': 4.5,           # top tweak
-        'octaves': 5,
-        'persistence': 4.5,
-        'lacunarity': 2.0,
+        'scale': 3.0,           # top tweak
+        'octaves': 6,
+        'persistence': 1.35,    # amplitude multiplier
+        'lacunarity': 1.5,      # frequency multiplier
         'base': random.randint(0, 1000)
     }
 
-    WaterlineHeight = randfloat(0.2, 0.45)
+    WaterlineHeight = randfloat(0.2, 0.6)
 
     world.set_param('WaterlineHeight', WaterlineHeight)
 
     ##
     ## Calculate elevation. Contributions from plate tectonics and simplex noise.
     ##
-    noise_contrib = 0.6
-    plate_contrib = 0.2
-    plate_effect_contrib = 0.2
+    noise_contrib = 0.7 #0.6
+    plate_contrib = 0.1 #0.2
+    plate_effect_contrib = 0.2 #0.2
 
     def init_elev(idx):
+        # return layered_noise(world.cp_latitude[idx], world.cp_longitude[idx])
         return __gen_noise(world.cp_latitude[idx], world.cp_longitude[idx], NoiseConfig)
 
     elev_noise = [init_elev(idx) for idx in world.cell_idxs()]
 
     # Adjust height of cells based on the plate they're a part of
     num_plates = max(world.cp_plate) + 1
-    plate_height = [randfloat(-0.5, 0.5) for _ in range(num_plates)]
+    plate_height = [randfloat(-1, 1) for _ in range(num_plates)]
 
     # Apply effects at plate boundary
     plate_effects = (pe_converge, pe_diverge)
@@ -98,7 +100,7 @@ def generate(world, vd):
         (target_idx, dist) = world.graph.distance(cell_idx, lambda idx: world.cp_plate[idx] != world.cp_plate[cell_idx])
 
         # TODO: convert '4' to std_density -- plate_effects need to accomodate arbitrary distances
-        if dist is not None and dist <= 4:
+        if dist is not None and dist <= 15:
             plate_key = (world.cp_plate[cell_idx], world.cp_plate[target_idx])
             cell_elev = elev_noise[cell_idx]
             target_elev = elev_noise[target_idx]
@@ -111,6 +113,7 @@ def generate(world, vd):
         for idx in world.cell_idxs()
     ]
 
+    # elevation_arr = world.new_cp_array(numpy.double, normalize(elevation_list))
     elevation_arr = world.new_cp_array(numpy.double, [ cap(e, 0.0, 0.99) for e in elevation_list ])
 
     ##

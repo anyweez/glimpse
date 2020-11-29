@@ -45,7 +45,7 @@ def generate(world, vd):
     celltype_arr = world.new_cp_array(None, world.cp_celltype)
 
     for cell_idx, depth in enumerate(water_depth):
-        if depth > world.std_density(5):
+        if depth > world.std_density(20):
             celltype_arr[cell_idx] = Cell.Type.WATER
             pool = [cell_idx,]
 

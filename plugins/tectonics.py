@@ -14,8 +14,8 @@ def generate(world, vd):
     # Configuration
     LandformConfig = {
         'InitialPlateSplitProb': 0.05,
-        'InitialContinentMin': random.randint(1, 3),
-        'InitialContinentMax': random.randint(3, 8),
+        'InitialContinentMin': random.randint(4, 8),
+        'InitialContinentMax': random.randint(8, 12),
     }
 
     world.set_param('InitialPlateSplitProb', LandformConfig['InitialPlateSplitProb'])

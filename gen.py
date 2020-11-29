@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 3500      # default = 3500
+PointCount = 2000      # default = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14
@@ -96,7 +96,7 @@ def generate(world_idx, language_list):
 
     # Render 'clean' map without POIs
     render_opts = renderer.RenderOptions()
-    render_opts.filename = 'plugin-test.png'
+    render_opts.filename = 'plugin-test-%d.png' % (world_idx,)
     # render_opts.filename = 'world-%s.png' % (world.id,)
 
     renderer.simple_render(w, vd, render_opts)
