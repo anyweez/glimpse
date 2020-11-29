@@ -69,8 +69,6 @@ def generate(world, vd):
 
             forest.update(expanded)
 
-        # cell_idxs = list( filter(lambda idx: score(idx) > threshold and proximity(idx), landgraph.floodfill(top_cell_idx)) )
-
         for idx in list(forest):
             forest_arr[idx] = forest_id
 

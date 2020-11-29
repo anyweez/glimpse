@@ -1,6 +1,6 @@
 import datetime, random, sys, numpy, pkgutil, importlib, time
 import voronoi, graph, renderer, world
-# import languages
+import langserver
 
 import plugins
 
@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 3500
+PointCount = 3500      # default = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14

@@ -6,9 +6,12 @@ from decorators import genreq
 from cultures.human import HumanCulture
 
 class City(Entity):
-    def __init__(self, cell_idx):
+    def __init__(self, cell_idx, culture):
         super().__init__(None)
         self.cell_idx = cell_idx
+        self.culture = culture
+
+        self.fetch_name(culture.lang, 'city')
 
     def render_stage2(self, ctx, world, vd, theme):
         city_radius = 0.01
@@ -32,7 +35,7 @@ def generate(world, vd):
     CityCount = random.randint(5, 18)
 
     cultures = [
-        HumanCulture(None, world),
+        HumanCulture('english', world),
     ]
     cities = []
 
@@ -58,7 +61,7 @@ def generate(world, vd):
 
         top_cell_idx = samples[scores.index(max(scores))]
 
-        cities.append( City(top_cell_idx) )
+        cities.append( City(top_cell_idx, culture) )
 
     # Add all cities to the world
     for city in cities:

@@ -1,3 +1,6 @@
+import langserver
+
+lc = langserver.GetClient()
 
 class Entity(object):
     def __init__(self, graph, name=None):
@@ -18,6 +21,9 @@ class Entity(object):
         Immediately after all other elements are rendered.
         '''
         raise NotImplementedError('Entity does not leverage stage 2 for rendering')
+
+    def fetch_name(self, language, entity_type):
+        self.name = lc.get_name(language, entity_type)
 
     @staticmethod
     def _transform_pt(pt):
