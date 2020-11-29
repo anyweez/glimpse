@@ -75,16 +75,11 @@ def generate(world, vd):
     def init_elev(idx):
         return __gen_noise(world.cp_latitude[idx], world.cp_longitude[idx], NoiseConfig)
 
-    elevation_list = [init_elev(idx) * noise_contrib for idx in world.cell_idxs()]
+    elev_noise = [init_elev(idx) for idx in world.cell_idxs()]
 
     # Adjust height of cells based on the plate they're a part of
     num_plates = max(world.cp_plate) + 1
-    plate_height = [randfloat(-1 * plate_contrib, plate_contrib) for _ in range(num_plates)]
-
-    def shift_by_plate(idx, elevation):
-        return plate_height[world.cp_plate[idx]] + elevation
-
-    elevation_list = [ shift_by_plate(idx, elev) for idx, elev in enumerate(elevation_list) ]
+    plate_height = [randfloat(-0.5, 0.5) for _ in range(num_plates)]
 
     # Apply effects at plate boundary
     plate_effects = (pe_converge, pe_diverge)
@@ -96,22 +91,25 @@ def generate(world, vd):
             boundaries[(first_idx, second_idx)] = func
             boundaries[(second_idx, first_idx)] = func
 
-    plate_effect_mod = [0.0,] * len(elevation_list) # modifications due to plate effects
+    elev_plate_eff = [0.0,] * len(world.cell_idxs()) # modifications due to plate effects
 
     # Find plate boundaries and calculate elevation adjustments
     for cell_idx in world.cell_idxs():
         (target_idx, dist) = world.graph.distance(cell_idx, lambda idx: world.cp_plate[idx] != world.cp_plate[cell_idx])
 
-        # TODO: convert '3' to std_density -- plate_effects need to accomodate arbitrary distances
+        # TODO: convert '4' to std_density -- plate_effects need to accomodate arbitrary distances
         if dist is not None and dist <= 4:
             plate_key = (world.cp_plate[cell_idx], world.cp_plate[target_idx])
-            cell_elev = elevation_list[cell_idx]
-            target_elev = elevation_list[target_idx]
+            cell_elev = elev_noise[cell_idx]
+            target_elev = elev_noise[target_idx]
 
-            plate_effect_mod[cell_idx] = boundaries[plate_key](cell_elev, target_elev, dist) * plate_effect_contrib
+            elev_plate_eff[cell_idx] = boundaries[plate_key](cell_elev, target_elev, dist)
 
     # apply plate effect modifications to the elevation list array
-    elevation_list = [ elevation_list[idx] + plate_effect_mod[idx] for idx in range(len(elevation_list)) ]
+    elevation_list = [ 
+        (elev_noise[idx] * noise_contrib) + (plate_height[world.cp_plate[idx]] * plate_contrib) + (elev_plate_eff[idx] * plate_effect_contrib)
+        for idx in world.cell_idxs()
+    ]
 
     elevation_arr = world.new_cp_array(numpy.double, [ cap(e, 0.0, 0.99) for e in elevation_list ])
 
@@ -125,7 +123,7 @@ def generate(world, vd):
     # Determine which cells are land vs water
     celltype_arr = world.new_cp_array(
         None, 
-        [ celltype(elevation_list[idx]) for idx in world.cell_idxs() ],
+        [ celltype(elevation_arr[idx]) for idx in world.cell_idxs() ],
     )
 
     world.add_cell_property('elevation', elevation_arr)
