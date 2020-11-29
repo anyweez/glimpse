@@ -3,6 +3,7 @@ import numpy, random, functools
 from decorators import genreq
 from world import Cell
 
+NumForests = 10
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
@@ -17,6 +18,7 @@ def generate(world, vd):
 
     TODO: forests can't spread into cells that are already forests
     '''
+    
     forest_arr = world.new_cp_array(numpy.int8, -1)
     
     def land_only(edge):
@@ -46,26 +48,30 @@ def generate(world, vd):
     land_cells = numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]
 
 
-    for forest_id in range(5):
+    for forest_id in range(NumForests):
         samples = random.choices(land_cells, k=SampleSize)
-        scores = list( map(score, samples) )
+        scores = [score(idx) for idx in samples]
 
         top_cell_idx = samples[scores.index(max(scores))]
         threshold = max(scores) * ScoreThresholdMultiplier
 
-        def proximity(idx):
-            '''
-            Returns True if this cell is within an acceptable proximity of the center cell. There is
-            a significant random component to this, though the probability of a True is higher the
-            closer the cell is to the center of the forest.
-            '''
-            (_, dist) = landgraph.distance(top_cell_idx, lambda next_idx: next_idx == idx)
+        forest = set([top_cell_idx,])
 
-            return random.random() > (dist * 5) / 100.0
+        for dist in range(1, 10):
+            if random.random() < (dist / 20.0):
+                break
 
-        cell_idxs = list( filter(lambda idx: score(idx) > threshold and proximity(idx), landgraph.floodfill(top_cell_idx)) )
+            expanded = [ 
+                idx 
+                for idx in landgraph.neighbors(top_cell_idx, dist=dist) 
+                if score(idx) > threshold and random.random() > 0.30
+            ]
 
-        for idx in cell_idxs:
+            forest.update(expanded)
+
+        # cell_idxs = list( filter(lambda idx: score(idx) > threshold and proximity(idx), landgraph.floodfill(top_cell_idx)) )
+
+        for idx in list(forest):
             forest_arr[idx] = forest_id
 
     world.add_cell_property('forest_id', forest_arr)

@@ -352,7 +352,7 @@ def simple_render(world, vd, opts):
         color_sealevel = colour.Color('green')
         color_peak = colour.Color('brown')
 
-        num_colors = 10
+        num_colors = 25
 
         gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
 
@@ -396,12 +396,13 @@ def simple_render(world, vd, opts):
                 draw_outline(ctx, start, end)
 
         # Draw forests
-        for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
-            cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+        if hasattr(world, 'cp_forest_id'):
+            for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
+                cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
 
-            for idx in cell_idxs:
-                pt = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
-                draw_tree(ctx, pt)
+                for idx in cell_idxs:
+                    pt = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
+                    draw_tree(ctx, pt)
 
         # Draw entities (stage 2)
         for entity in world.entities():
