@@ -16,8 +16,8 @@ class City(Entity):
     def render_stage2(self, ctx, world, vd, theme):
         city_radius = 0.01
         city_loc = Entity._transform_pt((
-            world.cp_latitude[self.cell_idx],
             world.cp_longitude[self.cell_idx],
+            world.cp_latitude[self.cell_idx],
         ))
 
         ctx.set_source_rgba(*theme.CityFill)
@@ -31,12 +31,13 @@ class City(Entity):
 
 @genreq(cellprops=['elevation', 'celltype'])
 def generate(world, vd):
-    SampleSize = 25
-    CityCount = random.randint(5, 18)
+    SampleSize = 20
+    CityCount = random.randint(5, 12)
 
     cultures = [
         HumanCulture('english', world),
     ]
+
     cities = []
 
     def score(region_idx, culture):
@@ -52,17 +53,18 @@ def generate(world, vd):
 
     land_cells = numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]
 
-    # Identify the best place to settle based on a sampling of possible cells
-    for _ in range(CityCount):
-        culture = cultures[0]
+    if len(land_cells) > 0:
+        # Identify the best place to settle based on a sampling of possible cells
+        for _ in range(CityCount):
+            culture = cultures[0]
 
-        samples = random.choices(land_cells, k=SampleSize)
-        scores = list( map(lambda idx: score(idx, culture), samples) )
+            samples = random.choices(land_cells, k=SampleSize)
+            scores = list( map(lambda idx: score(idx, culture), samples) )
 
-        top_cell_idx = samples[scores.index(max(scores))]
+            top_cell_idx = samples[scores.index(max(scores))]
 
-        cities.append( City(top_cell_idx, culture) )
+            # Add city to the world
+            city = City(top_cell_idx, culture)
 
-    # Add all cities to the world
-    for city in cities:
-        world.add_entity(city)
+            cities.append(city)
+            world.add_entity(city)

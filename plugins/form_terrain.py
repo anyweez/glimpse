@@ -62,7 +62,7 @@ def generate(world, vd):
         'base': random.randint(0, 1000)
     }
 
-    WaterlineHeight = randfloat(0.2, 0.6)
+    WaterlineHeight = randfloat(0.3, 0.65)
 
     world.set_param('WaterlineHeight', WaterlineHeight)
 

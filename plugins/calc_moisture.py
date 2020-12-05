@@ -28,21 +28,24 @@ def __gen_noise(x, y, config):
 @genreq(cellprops=['celltype', 'latitude', 'longitude'], worldparams=['has_lakes'])
 def generate(world, vd):
 
-    moisture_list = []
-
-    for idx in world.cell_idxs():
+    def calculate_cell_moisture(idx):
         base = __gen_noise(world.cp_latitude[idx], world.cp_longitude[idx], NoiseConfig)
 
         dist_water = world.graph.distance(idx, lambda dest_idx: world.cp_celltype[dest_idx] == Cell.Type.WATER)
 
-        if dist_water == 1:
+        # Cells closer to water have higher moisture levels. 
+        # "Moisture" refers to rainfall, not just the existance of water.
+        if world.cp_celltype[idx] == Cell.Type.WATER:
+            base += 0.25
+        elif dist_water == 1:
             base += 0.2
         elif dist_water == 2:
-            base += 0.7
+            base += 0.12
         elif dist_water == 3:
-            base += 0.3
+            base += 0.04
         
-        moisture_list.append(base)
+        return max(0.0, min(0.99, base))
 
+    moisture_list = [calculate_cell_moisture(idx) for idx in world.cell_idxs()]
     moisture_arr = world.new_cp_array(numpy.double, moisture_list)
     world.add_cell_property('moisture', moisture_arr)

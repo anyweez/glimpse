@@ -7,7 +7,6 @@ NumForests = 10
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
-# FIXME: forest generation needs to run after lake generation
 @genreq(cellprops=['celltype', 'elevation'], worldparams=['has_lakes'])
 def generate(world, vd):
     '''

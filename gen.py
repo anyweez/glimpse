@@ -1,4 +1,4 @@
-import datetime, random, sys, numpy, pkgutil, importlib, time
+import datetime, random, sys, numpy, pkgutil, importlib, time, os
 import voronoi, graph, renderer, world
 import langserver
 
@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 2000      # default = 3500
+PointCount = 3500      # default = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14
@@ -94,12 +94,23 @@ def generate(world_idx, language_list):
     ## Render
     print('  [%s] Rendering world...' % (w.id,))
 
+    folder = 'gallery/%s' % (str(datetime.datetime.now()),)
+
+    os.mkdir(folder)
+
     # Render 'clean' map without POIs
     render_opts = renderer.RenderOptions()
-    render_opts.filename = 'plugin-test-%d.png' % (world_idx,)
-    # render_opts.filename = 'world-%s.png' % (world.id,)
+    render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
 
     renderer.simple_render(w, vd, render_opts)
+
+    render_opts_t = renderer.RenderOptions()
+    render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)
+    renderer.heatmap(w, vd, render_opts_t, render_opts.filename, lambda idx: w.cp_temperature[idx])
+
+    render_opts_m = renderer.RenderOptions()
+    render_opts_m.filename = '%s/%d.moisture.png' % (folder, world_idx,)
+    renderer.heatmap(w, vd, render_opts_m, render_opts.filename, lambda idx: w.cp_moisture[idx])
 
     # renderer.render(
     #     world, 

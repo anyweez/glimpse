@@ -1,6 +1,7 @@
 import enum, cairo, colour, math, random, json, functools, numpy
 
 import xml.etree.ElementTree as ET
+from PIL import Image
 from world import Cell
 
 class RenderOptions(object):
@@ -376,13 +377,16 @@ def simple_render(world, vd, opts):
                 pass
 
         # Draw water
+        water_color_shallow = colour.Color(rgb=theme.WaterShallow[:3])
+        water_color_deep = colour.Color(rgb=theme.WaterDeep[:3])
+        water_gradient = theme.add_alpha( [c.rgb for c in water_color_shallow.range_to(water_color_deep, 5)] )
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
             region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
 
-            if world.cp_elevation[idx] < world.get_param('WaterlineHeight') / 2.0:
-                draw_region(ctx, region, FullColorTheme.WaterDeep)
-            else:
-                draw_region(ctx, region, FullColorTheme.WaterShallow)
+            depth = world.get_param('WaterlineHeight') - world.cp_elevation[idx]
+
+            color_idx = math.floor( depth / world.get_param('WaterlineHeight') * len(water_gradient) )
+            draw_region(ctx, region, water_gradient[color_idx])
 
         # Draw outlines
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
@@ -401,7 +405,7 @@ def simple_render(world, vd, opts):
                 cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
 
                 for idx in cell_idxs:
-                    pt = transform( (world.cp_latitude[idx], world.cp_longitude[idx]) )
+                    pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                     draw_tree(ctx, pt)
 
         # Draw entities (stage 2)
@@ -423,3 +427,46 @@ def simple_render(world, vd, opts):
         #         draw_line_between(ctx, src, dest, (0, 0, 0, 1))
 
         close_surface(output_fmt, surface)
+
+def heatmap(world, vd, opts, base_img_path, cellfunc):
+    def create_surface(fmt):
+        if fmt == 'png':
+            return cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y)
+        
+        if fmt == 'svg':
+            return cairo.SVGSurface(opts.filename, opts.scale_x, opts.scale_y)
+
+        return Exception('Unknown image type requested: %s' % (fmt,))
+
+    def close_surface(format, cairo_surface):
+        if format == 'png':
+            surface.write_to_png(opts.filename)
+
+    output_fmt = opts.filename[-3:]
+
+    with create_surface(output_fmt) as surface:
+        ctx = cairo.Context(surface)
+        ctx.scale(opts.scale_x, opts.scale_y)
+
+        color_cold = colour.Color('blue')
+        color_hot = colour.Color('red')
+
+        num_colors = 25
+        gradient = FullColorTheme.add_alpha( list( map(lambda c: c.rgb, color_cold.range_to(color_hot, num_colors)) ) )
+        gradient = [ (c[0], c[1], c[2], 0.5) for c in gradient ] # heatmap layers should be somewhat transparent (to overlay)
+
+        for idx in world.cell_idxs():
+            magnitude = cellfunc(idx)
+
+            color_idx = math.floor( magnitude * len(gradient) )
+            region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
+
+            draw_region(ctx, region, gradient[color_idx])
+
+        close_surface(output_fmt, surface)
+
+    base_img = Image.open(base_img_path).convert('RGBA')
+    overlay_img = Image.open(opts.filename).convert('RGBA')
+
+    base_img.paste(overlay_img, (0,0), overlay_img)
+    base_img.save(opts.filename, 'png')

@@ -26,8 +26,9 @@ def generate(world, vd):
         # TODO: check performance implications; this is O(N^2) and may be slow
         cell_idx = v_idxs.index(v_idx)
 
-        latitude_arr[cell_idx] = vd.vor.points[point_idx][0]
-        longitude_arr[cell_idx] = vd.vor.points[point_idx][1]
+        # Longitude = x axis, latitude = y axis
+        longitude_arr[cell_idx] = vd.vor.points[point_idx][0]
+        latitude_arr[cell_idx] = vd.vor.points[point_idx][1]
 
     world.add_cell_property('latitude', latitude_arr)
     world.add_cell_property('longitude', longitude_arr)
