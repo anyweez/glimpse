@@ -67,3 +67,4 @@ def generate(world, vd):
                     pool.append(lowest)
 
     world.add_cell_property('celltype', celltype_arr)
+    world.set_param('has_lakes', True)
