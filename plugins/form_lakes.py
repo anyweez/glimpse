@@ -3,7 +3,7 @@ import numpy, functools, math
 from decorators import genreq
 from world import Cell
 
-@genreq(cellprops=['celltype', 'elevation'])
+@genreq(cellprops=['celltype', 'elevation', 'depth'])
 def generate(world, vd):
     '''
     Create lakes in low 'bowls' where water runs downhill and doesn't have a way to get out to an
@@ -65,6 +65,12 @@ def generate(world, vd):
 
                     celltype_arr[lowest] = Cell.Type.WATER
                     pool.append(lowest)
+            
+            # Set depth for new lake cells
+            waterline_height = max([ world.cp_elevation[idx] for idx in pool ])
+
+            for idx in pool:
+                world.cp_depth[idx] = waterline_height - world.cp_elevation[idx]
 
     world.add_cell_property('celltype', celltype_arr)
     world.set_param('has_lakes', True)

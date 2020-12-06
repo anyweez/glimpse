@@ -108,7 +108,7 @@ class Theme(object):
 
 class FullColorTheme(Theme):
     WaterShallow    = rgba(1, 133, 209)
-    WaterDeep       = rgba(3, 119, 188)
+    WaterDeep       = rgba(1, 59, 94) #rgba(3, 119, 188)
     WaterRiver      = rgba(0, 96, 152)
     WaterShore      = rgba(0, 7, 12)
 
@@ -379,13 +379,13 @@ def simple_render(world, vd, opts):
         # Draw water
         water_color_shallow = colour.Color(rgb=theme.WaterShallow[:3])
         water_color_deep = colour.Color(rgb=theme.WaterDeep[:3])
-        water_gradient = theme.add_alpha( [c.rgb for c in water_color_shallow.range_to(water_color_deep, 5)] )
+        water_gradient = theme.add_alpha( [c.rgb for c in water_color_shallow.range_to(water_color_deep, 6)] )
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
             region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
 
-            depth = world.get_param('WaterlineHeight') - world.cp_elevation[idx]
+            # depth = world.get_param('WaterlineHeight') - world.cp_elevation[idx]
 
-            color_idx = math.floor( depth / world.get_param('WaterlineHeight') * len(water_gradient) )
+            color_idx = math.floor( world.cp_depth[idx] / world.get_param('WaterlineHeight') * len(water_gradient) )
             draw_region(ctx, region, water_gradient[color_idx])
 
         # Draw outlines
