@@ -1,4 +1,4 @@
-import random, numpy
+import random, numpy, collections
 
 from world import Cell
 from decorators import genreq
@@ -12,26 +12,35 @@ NoiseConfig = {
     'base': random.randint(0, 1000)
 }
 
-def __gen_noise(x, y, config):
-    scaled_x = x / config['scale']
-    scaled_y = y / config['scale']
+NoiseWeight = collections.namedtuple('NoiseWeight', ['weight', 'scale', 'octaves'])
+noise_weights = [
+    NoiseWeight(weight=0.8, scale=2, octaves=4),
+    NoiseWeight(weight=0.2, scale=4, octaves=8),
+    NoiseWeight(weight=0.1, scale=8, octaves=16)
+]
+noise_base = random.randint(0, 1000)
 
-    octaves = config['octaves']
-    persistence = config['persistence']
-    lacunarity = config['lacunarity']
+def noise_xy(x, y):
+    all_weights = sum( [nw.weight for nw in noise_weights] )
 
-    base = config['base']
+    total = 0.0
+    for nw in noise_weights:
+        weight = nw.weight / all_weights
 
-    return ( snoise2(scaled_x, scaled_y, octaves=octaves, persistence=persistence, lacunarity=lacunarity, base=base) + 1.0) / 2.0
+        # Shift noise from [-1, 1] to [0, 1]
+        base = 0.5 * (snoise2(x * nw.scale, y * nw.scale, nw.octaves, base=noise_base) + 1.0)
 
+        total += (weight * base)
+
+    return total
 
 @genreq(cellprops=['celltype', 'latitude', 'longitude'], worldparams=['has_lakes'])
 def generate(world, vd):
 
     def calculate_cell_moisture(idx):
-        base = __gen_noise(world.cp_latitude[idx], world.cp_longitude[idx], NoiseConfig)
+        base = noise_xy(world.cp_longitude[idx], world.cp_latitude[idx])
 
-        dist_water = world.graph.distance(idx, lambda dest_idx: world.cp_celltype[dest_idx] == Cell.Type.WATER)
+        (_, dist_water) = world.graph.distance(idx, lambda dest_idx: world.cp_celltype[dest_idx] == Cell.Type.WATER)
 
         # Cells closer to water have higher moisture levels. 
         # "Moisture" refers to rainfall, not just the existance of water.

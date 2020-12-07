@@ -93,16 +93,6 @@ def draw_line_between(ctx, src, dest, color, linewidth=0.003):
     ctx.set_line_width(linewidth)
     ctx.stroke()
 
-
-# class RenderColor(object):
-#     '''
-#     Color definitions
-#     '''
-#     WaterShallow =  rgb(1, 133, 209)
-#     WaterDeep =     rgb(3, 119, 188)
-#     WaterRiver =    rgb(0, 96, 152)
-
-
 class Theme(object):
     def __init__(self):
         pass
@@ -119,18 +109,6 @@ class FullColorTheme(Theme):
     @staticmethod
     def add_alpha(colors):
         return list( map(lambda c: (*c, 1.0), colors) )
-
-    # def __init__(self, ctx):
-    #     super().__init__()
-
-    #     color_sealevel = colour.Color('green')
-    #     color_peak = colour.Color('red')
-
-    #     num_colors = 25
-
-    #     self.gradient = list( color_sealevel.range_to(color_peak, num_colors) )
-    #     self.ctx = ctx
-
 
 class PrintTheme(Theme):
     WaterShallow    = rgba(1, 133, 209, 0.4)
@@ -354,21 +332,51 @@ def simple_render(world, vd, opts):
         color_sealevel = colour.Color('green')
         color_peak = colour.Color('brown')
 
+        c_desert_low = colour.Color('#f5ffba')
+        c_desert_hi = colour.Color('#666b4d')
+
+        c_biomes = theme.add_alpha([
+            colour.Color('#d4e4d3').rgb,
+            colour.Color('#3a8381').rgb,
+            colour.Color('#ffe07f').rgb,
+            colour.Color('#228855').rgb,
+            colour.Color('#228855').rgb,
+            colour.Color('#f5ffba').rgb,
+            colour.Color('#f5ffba').rgb,
+            colour.Color('#534239').rgb,
+        ])
+
         num_colors = 25
 
-        gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
+        gradients = (
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            # theme.add_alpha( list( map(lambda c: c.rgb, c_desert_low.range_to(c_desert_hi, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+            theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
+        )
+
+        # gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
 
         land_elevation_range = 1.0 - world.get_param('WaterlineHeight')
 
         # Draw land
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
+            biome_id = world.cp_biome[idx]
             region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
 
             # How far is this cell above sea level?
             distance_above_water = world.cp_elevation[idx] - world.get_param('WaterlineHeight')
 
-            color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradient) )
-            draw_region(ctx, region, gradient[color_idx])
+            color_idx = math.floor( (distance_above_water / land_elevation_range) * len(gradients[biome_id]) )
+            # Elevation-based color scheme
+            draw_region(ctx, region, gradients[biome_id][color_idx])
+            # Biome color scheme
+            # draw_region(ctx, region, c_biomes[biome_id])
 
         # Draw entities (stage 1)
         for entity in world.entities():
@@ -399,13 +407,31 @@ def simple_render(world, vd, opts):
                 draw_outline(ctx, start, end)
 
         # Draw forests
-        if hasattr(world, 'cp_forest_id'):
-            for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
-                cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+        biome_density = (0.08, 0.12, 0.04, 0.20, 0.20, 0.02, 0.02, 0.4)
+        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
+            density = biome_density[world.cp_biome[idx]]
 
-                for idx in cell_idxs:
-                    pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
-                    draw_tree(ctx, pt)
+            if random.random() < density and world.cp_elevation[idx] < 0.8:
+                pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+                draw_tree(ctx, pt)
+
+    # Biome('Tundra', t=(0.0, 0.2), m=(0.0, 0.4)),            # cold and dry. do not go here.
+    # Biome('Boreal forest', t=(0.0, 0.3), m=(0.4, 1.0)),
+    # Biome('Temperate grassland', t=(0.2, 0.6), m=(0.0, 0.3)),
+    # Biome('Temperate forest', t=(0.2, 0.8), m=(0.3, 0.4)),
+    # Biome('Temperate forest', t=(0.3, 0.8), m=(0.4, 1.0)),
+    # Biome('Desert', t=(0.6, 1.0), m=(0.0, 0.3)),
+    # Biome('Desert', t=(0.8, 1.0), m=(0.3, 0.4)),
+    # Biome('Rainforest', t=(0.8, 1.0), m=(0.4, 1.0)),
+
+        # Draw forests
+        # if hasattr(world, 'cp_forest_id'):
+        #     for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
+        #         cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+
+        #         for idx in cell_idxs:
+        #             pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+        #             draw_tree(ctx, pt)
 
         # Draw entities (stage 2)
         for entity in world.entities():
@@ -548,7 +574,7 @@ def render_text(ctx, top_left, text, font_size=12):
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
-    ctx.set_source_rgba(1, 1, 1, 0.4)
+    ctx.set_source_rgba(1, 1, 1, 0.6)
     ctx.rectangle(
         top_left[0] - 0.005, top_left[1] - height - 0.005, 
         width + 0.01, height + 0.01

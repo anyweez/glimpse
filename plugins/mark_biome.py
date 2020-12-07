@@ -13,8 +13,8 @@ Biome = collections.namedtuple('Biome', ['name', 't', 'm'])
 biomes = [
     Biome('Tundra', t=(0.0, 0.2), m=(0.0, 0.4)),            # cold and dry. do not go here.
     Biome('Boreal forest', t=(0.0, 0.3), m=(0.4, 1.0)),
-    Biome('Temperate grassland', t=(0.2, 0.6), m=(0.0, 0.3)),
-    Biome('Temperate forest', t=(0.2, 0.8), m=(0.3, 0.4)),
+    Biome('Temperate grassland', t=(0.2, 0.6), m=(0.0, 0.4)),
+    Biome('Temperate forest', t=(0.6, 0.8), m=(0.3, 0.4)),
     Biome('Temperate forest', t=(0.3, 0.8), m=(0.4, 1.0)),
     Biome('Desert', t=(0.6, 1.0), m=(0.0, 0.3)),
     Biome('Desert', t=(0.8, 1.0), m=(0.3, 0.4)),

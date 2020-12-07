@@ -105,13 +105,13 @@ def generate(world_idx, language_list):
 
     renderer.simple_render(w, vd, render_opts)
 
-    # render_opts_t = renderer.RenderOptions()
-    # render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)
-    # renderer.heatmap(w, vd, render_opts_t, render_opts.filename, lambda idx: w.cp_temperature[idx])
+    render_opts_t = renderer.RenderOptions()
+    render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)
+    renderer.heatmap(w, vd, render_opts_t, render_opts.filename, lambda idx: w.cp_temperature[idx])
 
-    # render_opts_m = renderer.RenderOptions()
-    # render_opts_m.filename = '%s/%d.moisture.png' % (folder, world_idx,)
-    # renderer.heatmap(w, vd, render_opts_m, render_opts.filename, lambda idx: w.cp_moisture[idx])
+    render_opts_m = renderer.RenderOptions()
+    render_opts_m.filename = '%s/%d.moisture.png' % (folder, world_idx,)
+    renderer.heatmap(w, vd, render_opts_m, render_opts.filename, lambda idx: w.cp_moisture[idx])
 
     # renderer.render(
     #     world, 
