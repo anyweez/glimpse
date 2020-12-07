@@ -1,8 +1,9 @@
-import enum, cairo, colour, math, random, json, functools, numpy
+import enum, cairo, colour, math, random, json, functools, numpy, random
 
 import xml.etree.ElementTree as ET
 from PIL import Image
 from world import Cell
+from plugins.build_cities import City
 
 class RenderOptions(object):
     CellColorMode = enum.Enum('CellColorMode', 'ELEVATION')
@@ -383,8 +384,6 @@ def simple_render(world, vd, opts):
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
             region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
 
-            # depth = world.get_param('WaterlineHeight') - world.cp_elevation[idx]
-
             color_idx = math.floor( world.cp_depth[idx] / world.get_param('WaterlineHeight') * len(water_gradient) )
             draw_region(ctx, region, water_gradient[color_idx])
 
@@ -414,7 +413,31 @@ def simple_render(world, vd, opts):
                 entity.render_stage2(ctx, world, vd, theme)
             except NotImplementedError:
                 pass
+        
+        print('   * Optimizing label placement...')
+        labels = []
+        for entity in world.entities():
+            if isinstance(entity, City):
+                x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
+                w, h = label_dim(ctx, entity.name)
 
+                labels.append( Label((x, y), (w, h), entity.name) )
+
+        # Optimize label positions
+        iter_count = 0
+        conflicts = find_conflicts(labels)
+
+        while len(conflicts) > 0 and iter_count < 100:
+            # Shift one of the conflicting labels
+            random.choice(conflicts).shift()
+
+            conflicts = find_conflicts(labels)
+            iter_count += 1
+
+        # Render optimized labels
+        for label in labels:
+            top_left = transform( (label.position()[0], label.position()[1]) )
+            render_text(ctx, top_left, label.text)
 
         # graph sample
         # for idx in random.choices(world.cell_idxs(), k=10):
@@ -427,6 +450,115 @@ def simple_render(world, vd, opts):
         #         draw_line_between(ctx, src, dest, (0, 0, 0, 1))
 
         close_surface(output_fmt, surface)
+
+def label_dim(ctx, text):
+    ctx.select_font_face('Avenir Next', 
+        cairo.FONT_SLANT_NORMAL,
+        cairo.FONT_WEIGHT_NORMAL
+    )
+    ctx.set_font_size(0.02)
+
+    (x, y, width, height, dx, dy) = ctx.text_extents(text)
+
+    return (width, height)
+
+class Label(object):
+    def __init__(self, anchor, dim, text):
+        self.anchor = anchor    # The point the label is labeling
+        self.dim = dim          # The size of the label
+        self.text = text
+
+        x, y = self.anchor
+        w, h = self.dim
+
+        self.pos = [
+            (x + 0.02, y, w, h),
+            (x - w - 0.02, y, w, h),
+
+            (x + 0.02, y - (2 * h), w, h),
+            (x - w - 0.02, y - (2 * h), w, h),
+        ]
+
+        self.pos_idx = 0
+
+    def position(self):
+        return self.pos[self.pos_idx]
+
+    def shift(self):
+        self.pos_idx = (self.pos_idx + 1) % len(self.pos)
+
+        return self.position()
+
+def find_conflicts(labels):
+    conflicts = set()
+
+    for idx, first in enumerate(labels):
+        # If this label hangs off the edge of the map, we need to rotate it.
+        if is_offworld(first.position()):
+            conflicts.add(first)
+
+        # If two labels overlap, we need to rotate one of them.
+        for second in labels[idx+1:]:
+            if rectangles_conflict(first.position(), second.position()):
+                conflicts.add(first)
+                conflicts.add(second)
+
+    return list(conflicts)
+
+def is_offworld(rect):
+    if rect[0] < 0:
+        return True
+    
+    if rect[0] + rect[2] > 1.0:
+        return True
+    
+    if rect[1] < 0:
+        return True
+
+    if rect[1] + rect[3] > 1.0:
+        return True
+
+    return False
+
+def rectangles_conflict(r1, r2):
+    # r1 is to the right of r2
+    if r1[0] > r2[0] + r2[2]:
+        return False
+    
+    # r1 is to the left of r2
+    if r2[0] > r1[0] + r1[2]:
+        return False
+    
+    if r1[1] > r2[1] + r2[3]:
+        return False
+    
+    if r2[1] > r1[1] +r1[3]:
+        return False
+
+    return True 
+
+def render_text(ctx, top_left, text, font_size=12):
+    ctx.move_to(*top_left)
+
+    ctx.select_font_face('Avenir Next', 
+        cairo.FONT_SLANT_NORMAL,
+        cairo.FONT_WEIGHT_NORMAL
+    )
+    ctx.set_font_size(0.02)
+
+    (x, y, width, height, dx, dy) = ctx.text_extents(text)
+
+    ctx.set_source_rgba(1, 1, 1, 0.4)
+    ctx.rectangle(
+        top_left[0] - 0.005, top_left[1] - height - 0.005, 
+        width + 0.01, height + 0.01
+    )
+    ctx.fill()
+
+    ctx.move_to(*top_left)
+    ctx.set_source_rgb(0, 0, 0)
+    ctx.show_text(text)
+
 
 def heatmap(world, vd, opts, base_img_path, cellfunc):
     def create_surface(fmt):
