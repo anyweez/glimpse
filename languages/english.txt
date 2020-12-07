@@ -1,8 +1,6 @@
 Dyce
 Kennacraig
 Colonsay
-Uist
-Ballachulich
 Dalkeith
 Lochmaddy
 Mull
@@ -15,9 +13,6 @@ Hawick
 Forfar
 Tobermory
 Loch Tay
-Scrabster
-Auchtermuchty
-Kinlochewe
 Uig
 Kilsyth
 Peebles
@@ -42,8 +37,6 @@ Dunkeld
 Moffat
 Cumnock
 Aberfeldy
-Kilmahog
-Achnasheen
 Crail
 Jedburgh
 Iona
@@ -58,13 +51,9 @@ Augustus
 Dingwall
 Aboyne
 Cromarty
-Lochalsh
 Jedburgh
-Dunnet Head
-Inchnadamph
 Hebrides
 Greenlaw
-Lochgilphead
 Dunbeath
 Hawick
 Gairloch
@@ -92,38 +81,26 @@ Troon
 Spean
 Whithorn
 Lochnagar
-Kinloch Rannoch
 Durness
 Kilbride
 Dundee
 Lochaline
 Girvan
 Nairn
-Strathyre
 Haddington
 Dalmally
 Ardrossan
-Ben Nevis
 Moffat
 Lossiemouth
 Oban
 Glenrothes
 Dunbeath
 Crail
-Stranraer
 Melrose
 Peterhead
-Balinluig
-Loch Katrine
-Mallaig
 Deeside
 Newburgh
-Ardvasar
-Altnahara
-Tilliecoultry
 Lybster
-Loch Lomond
-Tobermory
 Jedburgh
 Selkirk
 Leven
@@ -202,10 +179,8 @@ Boarsrest
 Goldcrest
 Elkhorn
 Merryhall
-Winter's End
 Blythewood
 Fleet Landing
-Bowen's Island
 Tugby
 Crudgington
 Nettlebed
@@ -217,8 +192,6 @@ Budbrooke
 Swanley
 Crow
 Canonbury
-Wroxham
-Alwalton
 Petersham
 Catfield
 Curdridge
@@ -240,9 +213,7 @@ Brafferton
 Hammersmith
 Wallasey
 Cowling
-Wychavon
 Chatwell
-Little Bridge
 Purton
 Skinningrove
 Notton
@@ -262,14 +233,11 @@ Bloxholm
 Elmley
 Worlingworth
 Ashdown Forest
-Ballycrossaun
 Wolsingham
-Corrandulla
 Blackwood
 Ballinameen
 Lifford
 Rainow
-Grianan
 Rainhill
 Stow
 Milston
@@ -277,17 +245,12 @@ Uppington
 Ashcott
 Troutbeck
 Uplowman
-Allerthorpe
 Tandridge
-Tay
 Alvechurch
 Munsley
 Offley
 Lettermullan
 Pickworth
-Ousefleet
-Sollom
-Illston on the Hill
 Codrington
 Brotherton
 Branxton
@@ -311,9 +274,6 @@ Kesgrave
 Ashmansworth
 Braemar
 Bredfield
-Tibthorpe
-Ardsheelane
-Aberavon
 Peckleton
 Wakerley
 Soulby
@@ -322,27 +282,20 @@ Veryan
 Bowthorpe
 Eriskay
 Winson
-Lenham
 Freckenham
 Ballygub
 Portpatrick
-Orgreave
-Hedley on the Hill
 Appledore
 Blatchington
 Astley
 Ballyboghal
-Tain
-Shrigley Pott
 Musbury
 Bridgnorth
 Patrington
 Beeford
 Bardney
 Palace
-Sporle
 Portloman
-Crewe
 Siefton
 Chilwell
 Berrow Green
@@ -354,8 +307,6 @@ Pitney
 Skendleby
 Grindon
 Hinstock
-Tetchill
-Shrough
 Saint Bees
 Farthinghoe
 Harlow Hill
@@ -368,16 +319,13 @@ Wishleaf
 Grendale
 Felderford
 Stagcross
-Threader’s Hollow
 Ashpoint
 Ravenwood
 Starrynight
-Saint Michaelsheights
 Featherfall
 Featherfoot
 Wundwin
 Maubid
-San Serif
 Orcsnout
 Sevenclaw
 Crag
@@ -394,20 +342,11 @@ Smackover
 Underthal
 Riddle Reach
 Guildingston
-Jebend
-Shorley-Knott
-Aeby-on-Sea
 Smolton
-Hunose-Weir
-Fockery
-Neistermeechia
 Shavebury
-Downloe
-Supbrough
 Tiltonsville
 Glen Robins
 Mount Pleasant
-Martin's Ferry
 Deep Run
 Elm Grove
 Shadyside

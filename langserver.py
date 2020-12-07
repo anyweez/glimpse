@@ -37,6 +37,8 @@ def start_server():
         
         return base
 
+    print('Loading languages...')
+
     # Create server
     with SimpleXMLRPCServer((ServerHost, ServerPort), requestHandler=RequestHandler) as server:
         server.register_introspection_functions()
