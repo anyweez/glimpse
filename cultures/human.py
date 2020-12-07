@@ -15,6 +15,10 @@ class HumanCulture(culture.Culture):
         self.landgraph = world.graph.subgraph(edge_filter)
     
     def city_survivability(self, idx, others_idx):
+        '''
+        Humans can only live on land. They *can* survive in almost any biome, though
+        they tend to avoid extremes (tundra, deserts) unless forced there.
+        '''
         # Cities can't surive in water cells
         if self.world.cp_celltype[idx] == Cell.Type.WATER:
             return -1000.0
@@ -25,22 +29,31 @@ class HumanCulture(culture.Culture):
         return by_biome[self.world.cp_biome[idx]]
 
     def city_economy(self, idx, others_idx):
+        '''
+        Humans tend to trade on land, but have modest abilities to trade with others
+        over water as well if convenient. They're willing to traverse significant distances
+        on land to trade.
+        '''
+        def other_city(dest_idx):
+            return dest_idx in others_idx
+
         # Destination is a water cell
-        def water(dest_idx):
-            return self.world.cp_celltype[dest_idx] == Cell.Type.WATER
+        def other_city(dest_idx):
+            return dest_idx in others_idx
 
-        (_, dist) = self.world.graph.distance(idx, water, max_distance=5)
+        (_, dist_to_water_p) = self.world.graph.distance(idx, other_city, max_distance=25)
+        (_, dist_to_land_p) = self.landgraph.distance(idx, other_city, max_distance=100)
 
-        return (5 - dist) * 10.0 if dist > 0 else 0
+        return max(100.0 - dist_to_land_p, 100.0 - (4 * dist_to_water_p), 0.0)
 
     def city_threat(self, idx, others_idx):
+        '''
+        Humans don't like settling near other cities.
+        '''
         def other_city(dest_idx):
             return dest_idx in others_idx
 
         # Find the distance to the nearest city. The closer, the more dangerous. Only land cells matter.
         (_, dist) = self.landgraph.distance(idx, other_city, max_distance=20)
 
-        if dist >= 0 and dist < 20:
-            return 100.0 - (dist * 5.0)
-        else:
-            return 0.0
+        return max(100.0 - (dist * 5.0), 0.0)

@@ -355,12 +355,9 @@ def simple_render(world, vd, opts):
             theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
             theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
             theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
-            # theme.add_alpha( list( map(lambda c: c.rgb, c_desert_low.range_to(c_desert_hi, num_colors)) ) ),
             theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
             theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) ),
         )
-
-        # gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
 
         land_elevation_range = 1.0 - world.get_param('WaterlineHeight')
 
@@ -419,15 +416,6 @@ def simple_render(world, vd, opts):
             elif random.random() < density and world.cp_elevation[idx] < 0.8:
                 pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                 draw_tree(ctx, pt)
-
-    # Biome('Tundra', t=(0.0, 0.2), m=(0.0, 0.4)),            # cold and dry. do not go here.
-    # Biome('Boreal forest', t=(0.0, 0.3), m=(0.4, 1.0)),
-    # Biome('Temperate grassland', t=(0.2, 0.6), m=(0.0, 0.3)),
-    # Biome('Temperate forest', t=(0.2, 0.8), m=(0.3, 0.4)),
-    # Biome('Temperate forest', t=(0.3, 0.8), m=(0.4, 1.0)),
-    # Biome('Desert', t=(0.6, 1.0), m=(0.0, 0.3)),
-    # Biome('Desert', t=(0.8, 1.0), m=(0.3, 0.4)),
-    # Biome('Rainforest', t=(0.8, 1.0), m=(0.4, 1.0)),
 
         # Draw forests
         if hasattr(world, 'cp_forest_id'):

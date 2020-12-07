@@ -31,7 +31,7 @@ class City(Entity):
 
 @genreq(cellprops=['elevation', 'celltype', 'biome'])
 def generate(world, vd):
-    SampleSize = 20
+    SampleSize = 6
     CityCount = random.randint(5, 12)
 
     cultures = [
