@@ -1,32 +1,33 @@
-import numpy, random, functools
+import numpy, random
 
 from decorators import genreq
 from world import Cell
 
-NumForests = 10
+NumForests = random.randint(4, 6)
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
-@genreq(cellprops=['celltype', 'elevation'], worldparams=['has_lakes'])
+@genreq(cellprops=['celltype', 'elevation', 'biome'], worldparams=['has_lakes'])
 def generate(world, vd):
     '''
     Generate a series of forests across the map.
 
     TODO: replace hard-coded n=5 forests below with something based on
     a score threshold.
-
-    TODO: forests can't spread into cells that are already forests
     '''
     
     forest_arr = world.new_cp_array(numpy.int8, -1)
     
-    def land_only(edge):
+    def valid_forest_cells(edge):
         (src, dest) = edge
 
         return world.cp_celltype[src] == Cell.Type.LAND and \
             world.cp_celltype[dest] == Cell.Type.LAND
 
-    landgraph = world.graph.subgraph(land_only)
+    landgraph = world.graph.subgraph(valid_forest_cells)
+
+    # Relative weights of each biome's ability to support a forest.
+    biome_score = (0, 10, 0, 25, 25, 0, 0, 40)
 
     def score(region_idx):
         '''
@@ -36,18 +37,18 @@ def generate(world, vd):
         if world.cp_celltype[region_idx] == Cell.Type.WATER:
             return -100.0
 
-        def water(dest_idx):
-            return world.cp_celltype[dest_idx] == Cell.Type.WATER
+        # Certain biomes are more supportive of forests. Higher elevations are
+        # less supportive, no matter the biome type.
+        points_biome = biome_score[world.cp_biome[region_idx]]
+        elevation_penalty = 10 * (1.0 - world.cp_elevation[region_idx])
 
-        (_, dist_to_water) = landgraph.distance(region_idx, water, max_distance=10)
-
-        return (10 - dist_to_water) + (1.0 - world.cp_elevation[region_idx]) * 10
+        return points_biome - elevation_penalty
 
     # Sample a bunch of different cells and pick the one with the highest score
-    land_cells = numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]
-
-
     for forest_id in range(NumForests):
+        # Choose from all unassigned land cells.
+        land_cells = numpy.argwhere(forest_arr == -1)[:, 0]
+        
         samples = random.choices(land_cells, k=SampleSize)
         scores = [score(idx) for idx in samples]
 
@@ -56,14 +57,11 @@ def generate(world, vd):
 
         forest = set([top_cell_idx,])
 
-        for dist in range(1, 10):
-            if random.random() < (dist / 20.0):
-                break
-
+        for dist in range(1, random.randint(5, 10)):
             expanded = [ 
                 idx 
                 for idx in landgraph.neighbors(top_cell_idx, dist=dist) 
-                if score(idx) > threshold and random.random() > 0.30
+                if score(idx) > threshold and random.random() > 0.10 * dist
             ]
 
             forest.update(expanded)

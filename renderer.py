@@ -407,11 +407,16 @@ def simple_render(world, vd, opts):
                 draw_outline(ctx, start, end)
 
         # Draw forests
-        biome_density = (0.08, 0.12, 0.04, 0.20, 0.20, 0.02, 0.02, 0.4)
+        biome_density = (0.05, 0.1, 0.04, 0.10, 0.10, 0.02, 0.02, 0.15)
         for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
             density = biome_density[world.cp_biome[idx]]
 
-            if random.random() < density and world.cp_elevation[idx] < 0.8:
+            # Forests have a boosted chance of showing a tree.
+            if world.cp_forest_id[idx] != -1 and random.random() > 0.3:
+                pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+                draw_tree(ctx, pt)
+
+            elif random.random() < density and world.cp_elevation[idx] < 0.8:
                 pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                 draw_tree(ctx, pt)
 
@@ -425,13 +430,13 @@ def simple_render(world, vd, opts):
     # Biome('Rainforest', t=(0.8, 1.0), m=(0.4, 1.0)),
 
         # Draw forests
-        # if hasattr(world, 'cp_forest_id'):
-        #     for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
-        #         cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+        if hasattr(world, 'cp_forest_id'):
+            for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
+                cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
 
-        #         for idx in cell_idxs:
-        #             pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
-        #             draw_tree(ctx, pt)
+                for idx in cell_idxs:
+                    pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+                    draw_tree(ctx, pt)
 
         # Draw entities (stage 2)
         for entity in world.entities():
