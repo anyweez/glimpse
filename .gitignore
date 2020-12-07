@@ -1,6 +1,8 @@
-node_modules/
-dist/
-worlds/
-
+__pycache__
+.coverage
 .DS_Store
-.nyc_output/
+.vscode
+
+gallery/maps
+world-*.png
+heightmap.png

@@ -1,0 +1,68 @@
+body {
+    background-color: #f0ead6;
+    font-family: 'Open Sans', sans-serif;
+}
+
+main {
+    display: flex;
+    flex-direction: row;
+
+    margin-top: 40px;
+}
+
+footer {
+    text-align: center;
+}
+
+button {
+    text-align: center;
+    padding: 5px 10px;
+}
+
+h2, ul li {
+    cursor: pointer;
+}
+
+main .map {
+    width: 75%;
+    margin: 0 1% 4px 1%;
+}
+
+main .details {
+    width: 25%;
+    margin: 1%;
+}
+
+main .hover-details.subtle {
+    font-style: italic;
+}
+
+
+
+svg .city {
+    fill: yellow;
+    stroke: black;
+    stroke-width: 3;
+
+    opacity: 0.0;
+}
+
+svg .city.show {
+    opacity: 0.8;
+}
+
+svg .city:hover {
+    opacity: 0.8;
+}
+
+svg .lake, svg .mountain {
+    fill: orange;
+    stroke: black;
+    stroke-width: 0;
+
+    opacity: 0.0;
+}
+
+svg .lake.show, svg .mountain.show {
+    opacity: 0.8;
+}
