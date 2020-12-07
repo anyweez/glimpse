@@ -9,6 +9,8 @@ There are tons of great resources online for world generation, and many of the g
   <tr>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-1.png" alt="Drawing" style="width: 250px;"/> </td>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-2.png" alt="Drawing" style="width: 250px;"/> </td>
+    <td> <img src="https://anyweez.github.io/glimpse/img/terrain-3.png" alt="Drawing" style="width: 250px;"/> </td>
+    <td> <img src="https://anyweez.github.io/glimpse/img/terrain-4.png" alt="Drawing" style="width: 250px;"/> </td>
   </tr>
 </table>
 
@@ -31,3 +33,4 @@ Thanks to all who have taken the time to share their expertise. The following re
 * [Martin O'Leary's](http://mewo2.com/notes/terrain/) generator
 * [Scott Turner's site](https://heredragonsabound.blogspot.com/), which he actively maintains
 * [Azgaar's blog](https://azgaar.wordpress.com/)
+* [tadeaspaule's name generation RNN](https://github.com/tadeaspaule/universal-name-generator) for place name generation
