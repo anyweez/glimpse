@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 5000      # default = 3500
+PointCount = 6500      # default = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14

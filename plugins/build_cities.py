@@ -29,7 +29,7 @@ class City(Entity):
 
         ctx.stroke()
 
-@genreq(cellprops=['elevation', 'celltype'])
+@genreq(cellprops=['elevation', 'celltype', 'biome'])
 def generate(world, vd):
     SampleSize = 20
     CityCount = random.randint(5, 12)

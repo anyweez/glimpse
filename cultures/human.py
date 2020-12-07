@@ -19,11 +19,10 @@ class HumanCulture(culture.Culture):
         if self.world.cp_celltype[idx] == Cell.Type.WATER:
             return -1000.0
 
-        # Living at high elevations is harder
-        if self.world.cp_elevation[idx] > 0.80:
-            return 2.0
+        # Provided in same order as biome list in mark_biome.py
+        by_biome = (-50.0, -20.0, 3.0, 25.0, 25.0, -20.0, -20.0, 10.0)
 
-        return 10.0
+        return by_biome[self.world.cp_biome[idx]]
 
     def city_economy(self, idx, others_idx):
         # Destination is a water cell
