@@ -5,9 +5,9 @@ I've wanted to generate my own virtual worlds for a long time but haven't had mu
 
 There are tons of great resources online for world generation, and many of the good ideas I've implemented have come from more experienced minds. You can see acknowledgements (and good links to learn from!) below.
 
-<p float="left">
-  <img src="https://anyweez.github.io/glimpse/img/terrain-1.png" width="100" />
-  <img src="https://anyweez.github.io/glimpse/img/terrain-2.png" width="100" />  
+<p style="display: flex; flex-direction: row">
+  <img src="https://anyweez.github.io/glimpse/img/terrain-1.png" style="width: 50%; margin: 6px;" />
+  <img src="https://anyweez.github.io/glimpse/img/terrain-2.png" style="width: 50%; margin: 6px" />  
 </p>
 
 ### Overview of PCG
