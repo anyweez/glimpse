@@ -9,6 +9,8 @@ There are tons of great resources online for world generation, and many of the g
   <tr>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-1.png" alt="Drawing" style="width: 250px;"/> </td>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-2.png" alt="Drawing" style="width: 250px;"/> </td>
+  </tr>
+  <tr>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-3.png" alt="Drawing" style="width: 250px;"/> </td>
     <td> <img src="https://anyweez.github.io/glimpse/img/terrain-4.png" alt="Drawing" style="width: 250px;"/> </td>
   </tr>
