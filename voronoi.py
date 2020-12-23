@@ -22,7 +22,7 @@ class VoronoiDiagram(object):
 
         return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )       
 
-    def outline(self, cell_idxs):
+    def outline(self, cell_idxs, sort=False):
         ridges = []
 
         '''
@@ -38,7 +38,39 @@ class VoronoiDiagram(object):
             if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
                 ridges.append(ridge)
 
+        if sort:
+            ridges = self.sort_ridges(ridges)
+
         return list(map(lambda r: (self.vor.vertices[r[0]], self.vor.vertices[r[1]]), ridges))
+
+    def sort_ridges(self, ridges):
+        ordered = [ ridges[0], ]
+
+        next_id = ordered[0][0]
+        current_idx = 0
+
+        for _ in range( len(ridges) - 1 ):
+            for idx in range( len(ridges) ):
+                if idx != current_idx:
+                    if ridges[idx][0] == next_id:
+                        ordered.append( (ridges[idx][0], ridges[idx][1]) )
+
+                        next_id = ridges[idx][1]
+                        current_idx = idx
+                        break
+                    
+                    if ridges[idx][1] == next_id:
+                        ordered.append( (ridges[idx][1], ridges[idx][0]) )
+
+                        next_id = ridges[idx][0]
+                        current_idx = idx
+                        break
+
+        # If the first tuple is out of order 
+        if ordered[0][1] != ordered[1][0]:
+            ordered[0] = (ordered[0][1], ordered[0][0])
+
+        return ordered
 
 def generate(points, n_smooth=3):
     vor = None

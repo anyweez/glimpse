@@ -14,7 +14,8 @@ class City(Entity):
         self.fetch_name(culture.lang, 'city')
 
     def render_stage2(self, ctx, world, vd, theme):
-        city_radius = 0.01
+        city_radius = theme.CityRadius
+
         city_loc = Entity._transform_pt((
             world.cp_longitude[self.cell_idx],
             world.cp_latitude[self.cell_idx],
@@ -25,7 +26,7 @@ class City(Entity):
         ctx.fill_preserve()
 
         ctx.set_source_rgba(*theme.CityBorder)
-        ctx.set_line_width(0.004)
+        ctx.set_line_width(theme.CityBorderWidth)
 
         ctx.stroke()
 

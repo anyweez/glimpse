@@ -8,7 +8,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 6500      # default = 3500
+PointCount = 8000      # default = 3500
 NumCities = 8
 NumWorlds = 1
 NumForests = 14
@@ -104,6 +104,11 @@ def generate(world_idx, language_list):
     # render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
 
     renderer.simple_render(w, vd, render_opts)
+
+    print_render_opts = renderer.RenderOptions()
+    print_render_opts.filename = 'print.svg'
+
+    renderer.print_render(w, vd, print_render_opts)
 
     # render_opts_t = renderer.RenderOptions()
     # render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)

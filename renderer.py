@@ -2,6 +2,8 @@ import enum, cairo, colour, math, random, json, functools, numpy, random
 
 import xml.etree.ElementTree as ET
 from PIL import Image
+from scipy import interpolate
+from scipy.spatial import distance
 from world import Cell
 from plugins.build_cities import City
 
@@ -105,6 +107,8 @@ class FullColorTheme(Theme):
 
     CityFill        = rgba(255, 255, 255)
     CityBorder      = rgba(0, 0, 0)
+    CityBorderWidth = 0.004
+    CityRadius      = 0.01
     
     @staticmethod
     def add_alpha(colors):
@@ -114,6 +118,11 @@ class PrintTheme(Theme):
     WaterShallow    = rgba(1, 133, 209, 0.4)
     WaterDeep       = rgba(3, 119, 188, 0.4)
     WaterRiver      = rgba(0, 96, 152, 0.4)
+
+    CityFill        = rgba(210, 210, 210)
+    CityBorder      = rgba(0, 0, 0)
+    CityBorderWidth = 0.0035
+    CityRadius      = 0.005
 
     @staticmethod
     def add_alpha(colors):
@@ -471,11 +480,17 @@ def simple_render(world, vd, opts):
         close_surface(output_fmt, surface)
 
 def label_dim(ctx, text):
-    ctx.select_font_face('Avenir Next', 
+    # ctx.select_font_face('Avenir Next', 
+    #     cairo.FONT_SLANT_NORMAL,
+    #     cairo.FONT_WEIGHT_NORMAL
+    # )
+    # ctx.set_font_size(0.02)
+
+    ctx.select_font_face('Gill Sans', 
         cairo.FONT_SLANT_NORMAL,
         cairo.FONT_WEIGHT_NORMAL
     )
-    ctx.set_font_size(0.02)
+    ctx.set_font_size(0.014)
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
@@ -490,12 +505,14 @@ class Label(object):
         x, y = self.anchor
         w, h = self.dim
 
-        self.pos = [
-            (x + 0.02, y, w, h),
-            (x - w - 0.02, y, w, h),
+        x_pad = 0.01
 
-            (x + 0.02, y - (2 * h), w, h),
-            (x - w - 0.02, y - (2 * h), w, h),
+        self.pos = [
+            (x + x_pad, y, w, h),
+            (x - w - x_pad, y, w, h),
+
+            (x + x_pad, y - (2 * h), w, h),
+            (x - w - x_pad, y - (2 * h), w, h),
         ]
 
         self.pos_idx = 0
@@ -559,11 +576,11 @@ def rectangles_conflict(r1, r2):
 def render_text(ctx, top_left, text, font_size=12):
     ctx.move_to(*top_left)
 
-    ctx.select_font_face('Avenir Next', 
+    ctx.select_font_face('Gill Sans', 
         cairo.FONT_SLANT_NORMAL,
         cairo.FONT_WEIGHT_NORMAL
     )
-    ctx.set_font_size(0.02)
+    ctx.set_font_size(0.014)
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
@@ -621,3 +638,187 @@ def heatmap(world, vd, opts, base_img_path, cellfunc):
 
     base_img.paste(overlay_img, (0,0), overlay_img)
     base_img.save(opts.filename, 'png')
+
+
+def inter(vals):
+    x_axis = list( range(0, len(vals)) )
+
+    f = interpolate.interp1d(x_axis, vals, kind='cubic')
+    x_axis_new = numpy.arange(0, len(vals) - 1, 0.05)
+
+    return x_axis_new, f(x_axis_new)
+
+# def order_outline(segments):
+#     def nearest(anchor, choices):
+#         dist = list( map(lambda seg: distance.euclidean(anchor, seg[0]), choices) )
+
+#         shortest = dist[0]
+#         shortest_idx = 0
+
+#         for idx, d in enumerate(dist):
+#             if d < shortest:
+#                 shortest = d
+#                 shortest_idx = idx
+        
+#         return shortest_idx, choices[shortest_idx]
+
+#     ordered = [ segments[0], ]
+#     segments.pop(0)
+
+#     while len(segments) > 0:
+#         dest = ordered[-1][1]
+#         seg_idx, seg = nearest(dest, segments)
+
+#         ordered.append(seg)
+#         segments.pop(seg_idx)
+
+#     return ordered
+
+
+def render_tree(ctx, top):
+    tree_height = 0.012
+    trunk_height = 0.003
+
+    top = (top[0], top[1] - tree_height)
+    
+    bottom_left = (top[0] - (tree_height / 3.5), 1 - (top[1] + tree_height))
+    bottom_right = (top[0] + (tree_height / 3.5), 1 - (top[1] + tree_height))
+    bottom_center = (top[0], 1 - (top[1] + tree_height))
+    bottom_trunk = (top[0], 1 - (top[1] + tree_height + trunk_height))
+
+    # Draw trunk
+    # ctx.set_source_rgba(*rgba(0, 0, 0, 1))
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
+    ctx.set_line_width(0.002)
+
+    ctx.move_to(*transform(bottom_center))
+    ctx.line_to(*transform(bottom_trunk))
+    ctx.stroke()
+
+    # Draw outline of tree
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
+    ctx.set_line_width(0.002)
+
+    ctx.move_to(*top)
+    ctx.line_to(*transform(bottom_left))
+    ctx.line_to(*transform(bottom_right))
+    ctx.close_path()
+
+    ctx.stroke_preserve()
+
+    # Fill tree
+    ctx.set_source_rgba(*rgba(220, 220, 220, 0.8))
+    ctx.fill()
+
+def render_hill(ctx, point):
+    hill_width = 0.004
+
+    transformed = transform(point)
+
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
+    ctx.arc(transformed[0] - (hill_width / 2), transformed[1], hill_width, math.pi, math.pi * 2)
+
+    ctx.stroke_preserve()
+
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.20))
+    ctx.fill()
+
+def print_render(world, vd, opts):
+    def create_surface(fmt):
+        if fmt == 'svg':
+            return cairo.SVGSurface(opts.filename, opts.scale_x, opts.scale_y)
+
+        return Exception('Unknown image type requested: %s' % (fmt,))
+
+    output_fmt = opts.filename[-3:]
+
+    with create_surface(output_fmt) as surface:
+        ctx = cairo.Context(surface)
+        ctx.scale(opts.scale_x, opts.scale_y)
+
+        ctx.rectangle(0, 0, 1, 1)
+        ctx.set_source_rgb(0.82, 0.82, 0.82)
+        ctx.fill()
+
+        theme = PrintTheme()
+
+        # Draw land
+        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
+            region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
+
+            # Elevation-based color scheme
+            draw_region(ctx, region, (1, 1, 1, 1))
+
+        # Draw outlines
+        for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
+            # Get all cells with the current landform_id
+            cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
+
+            outline_x = []
+            outline_y = []
+
+            for segment in vd.outline(cell_idxs, sort=True):
+                outline_x.append(segment[0][0])
+                outline_y.append(segment[0][1])
+
+            outline_x.append(outline_x[0])
+            outline_y.append(outline_y[0])
+
+            _, outline_x = inter(outline_x)
+            _, outline_y = inter(outline_y)
+
+            for idx, _ in enumerate(outline_x[:-1]):
+                start = transform( (outline_x[idx], outline_y[idx]) )
+                end = transform( (outline_x[idx + 1], outline_y[idx + 1]) )
+
+                draw_outline(ctx, start, end)
+
+        # Draw forests
+        if hasattr(world, 'cp_forest_id'):
+            for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
+                cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+
+                for idx in [idx for idx in cell_idxs if random.random() < 0.5]:
+                    pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+                    render_tree(ctx, pt)
+
+        # Draw hills
+        def between(val, lower, upper):
+            return val >= lower and val <= upper
+
+        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
+            # Hills are randomly rendered in a specific elevation range.
+            if between( world.cp_elevation[idx], 0.65, 0.8 ) and random.random() < 0.25:
+                render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
+
+        # Draw entities (stage 2)
+        for entity in world.entities():
+            try:
+                entity.render_stage2(ctx, world, vd, theme)
+            except NotImplementedError:
+                pass
+        
+        # Place labels
+        labels = []
+        for entity in world.entities():
+            if isinstance(entity, City):
+                x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
+                w, h = label_dim(ctx, entity.name)
+
+                labels.append( Label((x, y), (w, h), entity.name) )
+
+        # Optimize label positions
+        iter_count = 0
+        conflicts = find_conflicts(labels)
+
+        while len(conflicts) > 0 and iter_count < 100:
+            # Shift one of the conflicting labels
+            random.choice(conflicts).shift()
+
+            conflicts = find_conflicts(labels)
+            iter_count += 1
+
+        # Render optimized labels
+        for label in labels:
+            top_left = transform( (label.position()[0], label.position()[1]) )
+            render_text(ctx, top_left, label.text)
