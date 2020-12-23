@@ -3,7 +3,7 @@ import numpy, random
 from decorators import genreq
 from world import Cell
 
-NumForests = random.randint(4, 6)
+NumForests = random.randint(2, 5)
 SampleSize = 10
 ScoreThresholdMultiplier = 0.8
 
@@ -11,9 +11,6 @@ ScoreThresholdMultiplier = 0.8
 def generate(world, vd):
     '''
     Generate a series of forests across the map.
-
-    TODO: replace hard-coded n=5 forests below with something based on
-    a score threshold.
     '''
     
     forest_arr = world.new_cp_array(numpy.int8, -1)
@@ -47,7 +44,7 @@ def generate(world, vd):
     # Sample a bunch of different cells and pick the one with the highest score
     for forest_id in range(NumForests):
         # Choose from all unassigned land cells.
-        land_cells = numpy.argwhere(forest_arr == -1)[:, 0]
+        land_cells = numpy.argwhere((forest_arr == -1) & (world.cp_celltype == Cell.Type.LAND))[:, 0]
         
         samples = random.choices(land_cells, k=SampleSize)
         scores = [score(idx) for idx in samples]
