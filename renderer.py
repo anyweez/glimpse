@@ -671,14 +671,19 @@ def render_tree(ctx, top):
     ctx.stroke()
 
     # Draw outline of tree
-    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
-    ctx.set_line_width(0.002)
 
     ctx.move_to(*top)
     ctx.line_to(*transform(bottom_left))
     ctx.line_to(*transform(bottom_right))
     ctx.close_path()
 
+    # Fill in white background
+    ctx.set_source_rgba(1, 1, 1, 1)
+    ctx.fill_preserve()
+
+    # Draw border
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
+    ctx.set_line_width(0.002)
     ctx.stroke_preserve()
 
     # Fill tree
@@ -690,11 +695,17 @@ def render_hill(ctx, point):
 
     transformed = transform(point)
 
-    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
     ctx.arc(transformed[0] - (hill_width / 2), transformed[1], hill_width, math.pi, math.pi * 2)
 
+    # Fill in white background
+    ctx.set_source_rgba(1, 1, 1, 1)
+    ctx.fill_preserve()
+
+    # Draw border
+    ctx.set_source_rgba(*rgba(60, 60, 60, 0.6))
     ctx.stroke_preserve()
 
+    # Draw final fill color
     ctx.set_source_rgba(*rgba(60, 60, 60, 0.20))
     ctx.fill()
 
@@ -763,22 +774,22 @@ def print_render(world, vd, opts):
 
             ctx.stroke()
 
-        # Draw forests
-        if hasattr(world, 'cp_forest_id'):
-            for forest_id in [id for id in numpy.unique(world.cp_forest_id) if id != -1]:
-                cell_idxs = numpy.argwhere(world.cp_forest_id == forest_id)[:, 0]
+        # Draw land iconography
+        idx_latsort = sorted(
+            numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0], 
+            key=lambda idx: world.cp_latitude[idx], 
+            reverse=True,
+        )
 
-                for idx in [idx for idx in cell_idxs if random.random() < 0.5]:
-                    pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
-                    render_tree(ctx, pt)
-
-        # Draw hills
         def between(val, lower, upper):
             return val >= lower and val <= upper
 
-        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
-            # Hills are randomly rendered in a specific elevation range.
-            if between( world.cp_elevation[idx], 0.65, 0.8 ) and random.random() < 0.25:
+        for idx in idx_latsort: #map(lambda item: item[0], idx_latsort):
+            if world.cp_forest_id[idx] != -1 and random.random() < 0.5:
+                pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
+                render_tree(ctx, pt)
+            
+            elif between( world.cp_elevation[idx], 0.65, 0.8 ) and random.random() < 0.25:
                 render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
 
         # Draw entities (stage 2)
