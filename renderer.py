@@ -119,6 +119,7 @@ class PrintTheme(Theme):
     WaterShallow    = rgba(1, 133, 209, 0.4)
     WaterDeep       = rgba(3, 119, 188, 0.4)
     WaterRiver      = rgba(0, 96, 152, 0.4)
+    WaterShore      = rgba(0, 7, 12)
 
     CityFill        = rgba(210, 210, 210)
     CityBorder      = rgba(0, 0, 0)
@@ -649,33 +650,6 @@ def inter(vals):
 
     return x_axis_new, f(x_axis_new)
 
-# def order_outline(segments):
-#     def nearest(anchor, choices):
-#         dist = list( map(lambda seg: distance.euclidean(anchor, seg[0]), choices) )
-
-#         shortest = dist[0]
-#         shortest_idx = 0
-
-#         for idx, d in enumerate(dist):
-#             if d < shortest:
-#                 shortest = d
-#                 shortest_idx = idx
-        
-#         return shortest_idx, choices[shortest_idx]
-
-#     ordered = [ segments[0], ]
-#     segments.pop(0)
-
-#     while len(segments) > 0:
-#         dest = ordered[-1][1]
-#         seg_idx, seg = nearest(dest, segments)
-
-#         ordered.append(seg)
-#         segments.pop(seg_idx)
-
-#     return ordered
-
-
 def render_tree(ctx, top):
     tree_height = 0.012
     trunk_height = 0.003
@@ -724,6 +698,18 @@ def render_hill(ctx, point):
     ctx.set_source_rgba(*rgba(60, 60, 60, 0.20))
     ctx.fill()
 
+def render_landform(ctx, outline_x, outline_y):
+    start_pt = transform( (outline_x[0], outline_y[0]) )
+
+    ctx.move_to(*start_pt)
+
+    for idx in range(1, len(outline_x)):
+        next_loc = transform( (outline_x[idx], outline_y[idx]) )
+
+        ctx.line_to(*next_loc)
+
+    ctx.close_path()
+
 def print_render(world, vd, opts):
     def create_surface(fmt):
         if fmt == 'svg':
@@ -743,14 +729,7 @@ def print_render(world, vd, opts):
 
         theme = PrintTheme()
 
-        # Draw land
-        for idx in numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]:
-            region = list( map(lambda pt: transform(pt), vd.get_region(idx)) )
-
-            # Elevation-based color scheme
-            draw_region(ctx, region, (1, 1, 1, 1))
-
-        # Draw outlines
+        # Draw landforms, including lakes
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
             # Get all cells with the current landform_id
             cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
@@ -769,13 +748,20 @@ def print_render(world, vd, opts):
                 _, outline_x = inter(outline_x)
                 _, outline_y = inter(outline_y)
 
-                for idx, _ in enumerate(outline_x[:-1]):
-                    start = transform( (outline_x[idx], outline_y[idx]) )
-                    end = transform( (outline_x[idx + 1], outline_y[idx + 1]) )
+                render_landform(ctx, outline_x, outline_y)
 
-                    draw_outline(ctx, start, end, stroke=False)
-                
-                ctx.stroke()
+            # Render background
+            ctx.set_source_rgba(1, 1, 1, 1)
+            ctx.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+            ctx.fill_preserve()
+
+            # Render border
+            ctx.set_source_rgba(*PrintTheme.WaterShore)
+            ctx.set_line_width(0.0015)
+            ctx.set_line_join(cairo.LINE_JOIN_BEVEL)
+            ctx.set_line_cap(cairo.LINE_CAP_ROUND)
+
+            ctx.stroke()
 
         # Draw forests
         if hasattr(world, 'cp_forest_id'):

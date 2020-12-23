@@ -99,11 +99,11 @@ def generate(world_idx, language_list):
     os.mkdir(folder)
 
     # Render 'clean' map without POIs
-    render_opts = renderer.RenderOptions()
-    render_opts.filename = 'sample.png'
+    # render_opts = renderer.RenderOptions()
+    # render_opts.filename = 'sample.png'
     # render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
 
-    renderer.simple_render(w, vd, render_opts)
+    # renderer.simple_render(w, vd, render_opts)
 
     print_render_opts = renderer.RenderOptions()
     print_render_opts.filename = 'print.svg'
