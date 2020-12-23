@@ -42,7 +42,7 @@ def draw_region(ctx, points, fill_color):
     ctx.set_line_width(0.003)
     ctx.stroke()
 
-def draw_outline(ctx, start_pt, end_pt):
+def draw_outline(ctx, start_pt, end_pt, stroke=True):
     ctx.move_to(*start_pt)
 
     ctx.line_to(*end_pt)
@@ -53,7 +53,8 @@ def draw_outline(ctx, start_pt, end_pt):
     ctx.set_line_join(cairo.LINE_JOIN_BEVEL)
     ctx.set_line_cap(cairo.LINE_CAP_ROUND)
 
-    ctx.stroke()
+    if stroke:
+        ctx.stroke()
 
 def draw_city(ctx, city):
     city_radius = 0.01
@@ -644,7 +645,7 @@ def inter(vals):
     x_axis = list( range(0, len(vals)) )
 
     f = interpolate.interp1d(x_axis, vals, kind='cubic')
-    x_axis_new = numpy.arange(0, len(vals) - 1, 0.05)
+    x_axis_new = numpy.arange(0, len(vals) - 1, 0.5)
 
     return x_axis_new, f(x_axis_new)
 
@@ -754,24 +755,27 @@ def print_render(world, vd, opts):
             # Get all cells with the current landform_id
             cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
 
-            outline_x = []
-            outline_y = []
+            for polygon in vd.outline_polygons(cell_idxs):
+                outline_x = []
+                outline_y = []
 
-            for segment in vd.outline(cell_idxs, sort=True):
-                outline_x.append(segment[0][0])
-                outline_y.append(segment[0][1])
+                for segment in polygon:
+                    outline_x.append(segment[0][0])
+                    outline_y.append(segment[0][1])
 
-            outline_x.append(outline_x[0])
-            outline_y.append(outline_y[0])
+                outline_x.append(outline_x[0])
+                outline_y.append(outline_y[0])
 
-            _, outline_x = inter(outline_x)
-            _, outline_y = inter(outline_y)
+                _, outline_x = inter(outline_x)
+                _, outline_y = inter(outline_y)
 
-            for idx, _ in enumerate(outline_x[:-1]):
-                start = transform( (outline_x[idx], outline_y[idx]) )
-                end = transform( (outline_x[idx + 1], outline_y[idx + 1]) )
+                for idx, _ in enumerate(outline_x[:-1]):
+                    start = transform( (outline_x[idx], outline_y[idx]) )
+                    end = transform( (outline_x[idx + 1], outline_y[idx + 1]) )
 
-                draw_outline(ctx, start, end)
+                    draw_outline(ctx, start, end, stroke=False)
+                
+                ctx.stroke()
 
         # Draw forests
         if hasattr(world, 'cp_forest_id'):
