@@ -22,8 +22,8 @@ class Entity(object):
         '''
         raise NotImplementedError('Entity does not leverage stage 2 for rendering')
 
-    def fetch_name(self, language, entity_type):
-        self.name = lc.get_name(language, entity_type)
+    def fetch_name(self, language, entity_type, params):
+        self.name = lc.get_name(language, entity_type, params)
 
     @staticmethod
     def _transform_pt(pt):

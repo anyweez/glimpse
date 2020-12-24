@@ -15,23 +15,35 @@ def GetClient():
 class RequestHandler(SimpleXMLRPCRequestHandler):
     rpc_paths = ('/RPC2',)
 
+def valid_basename(base):
+    def is_vowel(char):
+        return char in ['a', 'e', 'i', 'o', 'u', 'y']
+
+    vowels = ''.join( ['1' if is_vowel(char) else '0' for char in base] )
+
+    # Name can't have three consonants in a rule; these are usually unpronounceable
+    return '000' not in vowels
+
 def start_server():
-    def name_city(base):
-        if random.random() < 0.2:
-            return 'Fort %s' % (base,)
+    def name_city(base, params):
+        patterns = ['Fort %s', 'New %s', '%s']
+        patterns_weight = [2, 3, 10]
 
-        if random.random() < 0.25:
-            return '%s Harbor' % (base,)
+        if 'near_water' in params and params['near_water']:
+            patterns.append('%s Harbor')
+            patterns_weight.append(2)
 
-        if random.random() < 0.35:
-            return 'New %s' % (base,)
-        
-        return base
+            patterns.append('%s\'s Cove')
+            patterns_weight.append(1)
+
+        pattern = random.choices(patterns, weights=patterns_weight)
+
+        return pattern % (base,)
     
-    def name_lake(base):
+    def name_lake(base, params):
         return 'Lake %s' % (base,)
     
-    def name_mountain(base):
+    def name_mountain(base, params):
         if random.random() < 0.50:
             return 'Mount %s' % (base,)
         
@@ -48,7 +60,8 @@ def start_server():
         langmodels = {}
 
         for lang in langs:
-            print('  Language "%s" examples: %s' % (lang.name, [lang.generate_name() for _ in range(8)]))
+            print('  Loaded language "{}"'.format(lang.name))
+            # print('  Language "%s" examples: %s' % (lang.name, [lang.generate_name() for _ in range(8)]))
             langmodels[lang.name] = lang.generate_name
 
         entity_handlers = {
@@ -57,22 +70,27 @@ def start_server():
             'mountain': name_mountain,
         }
 
-        def get_name(language, entity_type):
+        def get_name(language, entity_type, params):
             '''
             Return a name in the specified language for the specified entity type.
 
             Example: get_name('english', 'city')
             '''
+
             if language in langmodels:
                 base = langmodels[language]()
 
+                while not valid_basename(base):
+                    print('  Rejecting: {}'.format(base))
+
+                    base = langmodels[language]()
+
                 try:
-                    return entity_handlers[entity_type](base)
+                    return entity_handlers[entity_type](base, params)
                 except:
                     return base
             else:
                 return ''
-
 
         server.register_function(get_name, 'get_name')
 

@@ -6,12 +6,18 @@ from decorators import genreq
 from cultures.human import HumanCulture
 
 class City(Entity):
-    def __init__(self, cell_idx, culture):
+    def __init__(self, cell_idx, culture, world):
         super().__init__(None)
         self.cell_idx = cell_idx
         self.culture = culture
 
-        self.fetch_name(culture.lang, 'city')
+        # Determine whether the city is near water for naming purposes; certain names are for
+        # seafaring cities only!
+        (_, distance) = world.graph.distance(cell_idx, lambda idx: world.cp_celltype[idx] == Cell.Type.WATER, 3)
+
+        self.fetch_name(culture.lang, 'city', {
+            'near_water': distance < 3,
+        })
 
     def render_stage2(self, ctx, world, vd, theme):
         city_radius = theme.CityRadius
@@ -65,7 +71,7 @@ def generate(world, vd):
             top_cell_idx = samples[scores.index(max(scores))]
 
             # Add city to the world
-            city = City(top_cell_idx, culture)
+            city = City(top_cell_idx, culture, world)
 
             cities.append(city)
             world.add_entity(city)

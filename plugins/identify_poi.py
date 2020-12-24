@@ -7,12 +7,32 @@ from decorators import genreq
 class PointOfInterest(Entity):
     Type = enum.Enum('POIType', 'LAKE MOUNTAIN')
 
-    def __init__(self, graph, poi_type):
+    def __init__(self, cell_idx, graph, poi_type):
         super().__init__(graph)
 
         self.type = poi_type
+        self.cell_idx = cell_idx
 
-def findLakes(cell_idxs, graph):
+        if self.type == PointOfInterest.Type.LAKE:
+            self.fetch_name('english', 'lake', {})
+        
+        if self.type == PointOfInterest.Type.MOUNTAIN:
+            self.fetch_name('english', 'mountain', {})
+
+def center(cell_idxs, world):
+    cell_x = []
+    cell_y = []
+
+    for idx in cell_idxs:
+        cell_x.append(world.cp_longitude[idx])
+        cell_y.append(world.cp_latitude[idx])
+
+    x = sum(cell_x) / len(cell_x)
+    y = sum(cell_y) / len(cell_y)
+
+    return (x, y)
+
+def findLakes(cell_idxs, graph, world, vd):
     LakeMinSize = 6
     LakeMaxSize = 40
 
@@ -27,7 +47,11 @@ def findLakes(cell_idxs, graph):
             def in_lake(edge):
                 return edge[0] in idxs and edge[1] in idxs
 
+            center_pt = center(idxs, world)
+            center_idx = vd.find_cell(center_pt[0], center_pt[1])
+
             yield PointOfInterest(
+                center_idx,
                 graph.subgraph(in_lake),
                 PointOfInterest.Type.LAKE,
             )
@@ -38,7 +62,7 @@ def findLakes(cell_idxs, graph):
 
         open_cells.discard(start_idx)
 
-def findMountains(cell_idxs, graph):
+def findMountains(cell_idxs, graph, world, vd):
     MountainMinSize = 6
     MountainMaxSize = 50
 
@@ -53,7 +77,11 @@ def findMountains(cell_idxs, graph):
             def in_mountain(edge):
                 return edge[0] in idxs and edge[1] in idxs
 
+            center_pt = center(idxs, world)
+            center_idx = vd.find_cell(center_pt[0], center_pt[1])
+
             yield PointOfInterest(
+                center_idx,
                 graph.subgraph(in_mountain),
                 PointOfInterest.Type.MOUNTAIN,
             )
@@ -88,8 +116,8 @@ def generate(world, vd):
     mountaingraph = world.graph.subgraph(edge_filter_mountain)
 
     # Find all lakes
-    for lake in findLakes(numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0], watergraph):
+    for lake in findLakes(numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0], watergraph, world, vd):
         world.add_entity(lake)
 
-    for mountain in findMountains(numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0], mountaingraph):
+    for mountain in findMountains(numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0], mountaingraph, world, vd):
         world.add_entity(mountain)

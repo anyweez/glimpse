@@ -7,6 +7,22 @@ class VoronoiDiagram(object):
         self.vor = vor
         self.mapping = mapping # cell_idx => voronoi_idx
 
+        self.center = {}
+
+        for cell_idx in self.mapping.keys():
+            region = self.get_region(cell_idx)
+
+            if len(region) == 0:
+                self.center[cell_idx] = None
+            else:
+                cell_x = list( map(lambda pt: pt[0], region) )
+                cell_y = list( map(lambda pt: pt[1], region) )
+
+                center_x = sum(cell_x) / len(cell_x)
+                center_y = sum(cell_y) / len(cell_y)
+
+                self.center[cell_idx] = (center_x, center_y)
+
     def get_region(self, cell_idx):
         '''
         Get the polygon that defines the region for the specified cell_id/region_id.
@@ -21,6 +37,22 @@ class VoronoiDiagram(object):
             return []
 
         return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )       
+
+    def find_cell(self, x, y):
+        shortest_dist = 100.0
+        shortest_idx = -1
+
+        for cell_idx in self.mapping.keys():
+            center = self.center[cell_idx]
+
+            if center is not None:
+                dist = abs(x - center[0]) + abs(y - center[1])
+
+                if dist < shortest_dist:
+                    shortest_dist = dist
+                    shortest_idx = cell_idx
+        
+        return shortest_idx
 
     def outline(self, cell_idxs):
         ridges = []

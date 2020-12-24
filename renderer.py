@@ -802,11 +802,10 @@ def print_render(world, vd, opts):
         # Place labels
         labels = []
         for entity in world.entities():
-            if isinstance(entity, City):
-                x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
-                w, h = label_dim(ctx, entity.name)
+            x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
+            w, h = label_dim(ctx, entity.name)
 
-                labels.append( Label((x, y), (w, h), entity.name) )
+            labels.append( Label((x, y), (w, h), entity.name) )
 
         # Optimize label positions
         iter_count = 0
