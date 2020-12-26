@@ -47,6 +47,9 @@ def start_server():
         if random.random() < 0.50:
             return 'Mount %s' % (base,)
         
+        if random.random() < 0.50:
+            return '%s\'s Peak' % (base,)
+        
         return base
 
     print('Loading languages...')
