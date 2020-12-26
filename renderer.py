@@ -647,7 +647,7 @@ def heatmap(world, vd, opts, base_img_path, cellfunc):
 def inter(vals):
     x_axis = list( range(0, len(vals)) )
 
-    f = interpolate.interp1d(x_axis, vals, kind='cubic')
+    f = interpolate.interp1d(x_axis, vals, kind='quadratic')
     x_axis_new = numpy.arange(0, len(vals) - 1, 0.5)
 
     return x_axis_new, f(x_axis_new)
