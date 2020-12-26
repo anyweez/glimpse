@@ -23,7 +23,17 @@ class VoronoiDiagram(object):
 
                 self.center[cell_idx] = (center_x, center_y)
 
-    def get_region(self, cell_idx):
+        self.cells_with_vertex = {}
+        for cell_idx in self.mapping.keys():
+            region = self.get_region(cell_idx, locations=False)
+
+            for vertex_id in [idx for idx in region if idx != -1]:
+                if vertex_id not in self.cells_with_vertex:
+                    self.cells_with_vertex[vertex_id] = set()
+
+                self.cells_with_vertex[vertex_id].add(cell_idx)
+
+    def get_region(self, cell_idx, locations=True):
         '''
         Get the polygon that defines the region for the specified cell_id/region_id.
         Returns a list of 2D points, or an empty list if the region isn't defined within
@@ -36,7 +46,19 @@ class VoronoiDiagram(object):
         if -1 in self.vor.regions[v_idx]:
             return []
 
-        return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )       
+        if locations:
+            return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )
+        else:
+            return self.vor.regions[v_idx]
+
+    def edges(self):
+        return list( filter(lambda ridge: -1 not in ridge, self.vor.ridge_vertices) )  
+
+    def included_cells(self, vertex_id):
+        return list( self.cells_with_vertex[vertex_id] )
+
+    def vertex_location(self, vertex_id):
+        return self.vor.vertices[vertex_id]
 
     def find_cell(self, x, y):
         shortest_dist = 100.0
@@ -103,7 +125,6 @@ class VoronoiDiagram(object):
         ridges.pop(0)
 
         next_id = polygon[0][1]
-        # current_idx = 0
 
         # Store the starting vertex of the polygon. Once we get back, we need to pick a new
         # polygon_start_id from the remaining vertices. This will cover landforms with multiple
@@ -141,55 +162,6 @@ class VoronoiDiagram(object):
         
         if len(polygon) > 0:
             polygons.append(polygon)
-
-            # if next_id == polygon_start_id:
-            #     ordered.append(ridges[0])
-
-            #     ridges.pop(0)
-            #     next_id = ordered[-1][1]
-    
-            # print(len(ridges))
-
-            # for idx in range( len(ridges) ):
-            #     if idx != current_idx:
-            #         if ridges[idx][0] == next_id:
-            #             ordered.append(ridges[idx])
-            #             # ordered.append( (ridges[idx][0], ridges[idx][1]) )
-
-            #             next_id = ridges[idx][1]
-            #             current_idx = idx
-            #             break
-                    
-            #         if ridges[idx][1] == next_id:
-            #             ordered.append(ridges[idx])
-            #             # ordered.append( (ridges[idx][1], ridges[idx][0]) )
-
-            #             next_id = ridges[idx][0]
-            #             current_idx = idx
-            #             break
-
-        # for _ in range( len(ridges) - 1 ):
-        #     for idx in range( len(ridges) ):
-        #         if idx != current_idx:
-        #             if ridges[idx][0] == next_id:
-        #                 ordered.append(ridges[idx])
-        #                 # ordered.append( (ridges[idx][0], ridges[idx][1]) )
-
-        #                 next_id = ridges[idx][1]
-        #                 current_idx = idx
-        #                 break
-                    
-        #             if ridges[idx][1] == next_id:
-        #                 ordered.append(ridges[idx])
-        #                 # ordered.append( (ridges[idx][1], ridges[idx][0]) )
-
-        #                 next_id = ridges[idx][0]
-        #                 current_idx = idx
-        #                 break
-
-        # If the first tuple is out of order 
-        # if ordered[0][1] != ordered[1][0]:
-        #     ordered[0] = (ordered[0][1], ordered[0][0])
 
         return polygons
 

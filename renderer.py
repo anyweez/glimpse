@@ -1,4 +1,5 @@
 import enum, cairo, colour, math, random, json, functools, numpy, random
+from plugins.identify_poi import PointOfInterest
 
 import xml.etree.ElementTree as ET
 from PIL import Image
@@ -118,7 +119,7 @@ class FullColorTheme(Theme):
 class PrintTheme(Theme):
     WaterShallow    = rgba(1, 133, 209, 0.4)
     WaterDeep       = rgba(3, 119, 188, 0.4)
-    WaterRiver      = rgba(0, 96, 152, 0.4)
+    WaterRiver      = rgba(0, 0, 0)
     WaterShore      = rgba(0, 7, 12)
 
     CityFill        = rgba(210, 210, 210)
@@ -496,7 +497,8 @@ def label_dim(ctx, text):
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
-    return (width, height)
+    # Add padding for the white box
+    return (width + 0.01, height + 0.02)
 
 class Label(object):
     def __init__(self, anchor, dim, text):
@@ -774,6 +776,13 @@ def print_render(world, vd, opts):
 
             ctx.stroke()
 
+        # Draw entities (stage 1)
+        for entity in world.entities():        
+            try:
+                entity.render_stage1(ctx, world, vd, theme)
+            except NotImplementedError:
+                pass
+
         # Draw land iconography
         idx_latsort = sorted(
             numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0], 
@@ -798,14 +807,15 @@ def print_render(world, vd, opts):
                 entity.render_stage2(ctx, world, vd, theme)
             except NotImplementedError:
                 pass
-        
+                
         # Place labels
         labels = []
         for entity in world.entities():
-            x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
-            w, h = label_dim(ctx, entity.name)
+            if hasattr(entity, 'cell_idx') and hasattr(entity, 'name'):
+                x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
+                w, h = label_dim(ctx, entity.name)
 
-            labels.append( Label((x, y), (w, h), entity.name) )
+                labels.append( Label((x, y), (w, h), entity.name) )
 
         # Optimize label positions
         iter_count = 0
