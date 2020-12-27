@@ -1,4 +1,4 @@
-import functools, numpy
+import functools, numpy, math
 
 from entity import Entity
 from world import Cell
@@ -7,11 +7,13 @@ from graph import Graph
 from decorators import genreq
 
 class River(Entity):
-    def __init__(self, graph):
+    def __init__(self, graph, edge_weights):
         '''
         A river's Graph is an EDGE graph, not a cell graph -- each vertex of the vonoroi diagram is a node.
         '''
         super().__init__(graph)
+
+        self.edge_weights = edge_weights
 
     def render_stage1(self, ctx, world, vd, theme):
         ctx.push_group()
@@ -22,12 +24,20 @@ class River(Entity):
             src_pt = Entity._transform_pt(vd.vertex_location(src))
             dest_pt = Entity._transform_pt(vd.vertex_location(dest))
 
+            flow_rate = 0.0
+
+            if (src, dest) in self.edge_weights:
+                flow_rate = math.sqrt( self.edge_weights[ (src, dest) ] ) / 2
+            else:
+                flow_rate = math.sqrt( self.edge_weights[ (dest, src) ] ) / 2
+
+            ctx.set_line_width(0.0005 * flow_rate)
+            ctx.set_source_rgba(*theme.WaterRiver)
+
             ctx.move_to(*src_pt)
             ctx.line_to(*dest_pt)
+            ctx.stroke()
 
-        ctx.set_source_rgba(*theme.WaterRiver)
-        ctx.set_line_width(0.0012)
-        ctx.stroke()
 
         ctx.pop_group_to_source()
 
@@ -107,7 +117,8 @@ def generate(world, vd):
                 return edge[0] in river_set and edge[1] in river_set
 
             if len(river_set) >= MinRiverLength and len(water_cells) > 0:
-                r = River( rivergraph.subgraph(single_river) )
+                print('adding river')
+                r = River( rivergraph.subgraph(single_river), edges )
 
                 # Add the river to the world
                 world.add_entity(r)

@@ -119,7 +119,7 @@ class FullColorTheme(Theme):
 class PrintTheme(Theme):
     WaterShallow    = rgba(1, 133, 209, 0.4)
     WaterDeep       = rgba(3, 119, 188, 0.4)
-    WaterRiver      = rgba(0, 0, 0)
+    WaterRiver      = rgba(40, 40, 40)
     WaterShore      = rgba(0, 7, 12)
 
     CityFill        = rgba(210, 210, 210)
