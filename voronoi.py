@@ -24,6 +24,7 @@ class VoronoiDiagram(object):
                 self.center[cell_idx] = (center_x, center_y)
 
         self.cells_with_vertex = {}
+
         for cell_idx in self.mapping.keys():
             region = self.get_region(cell_idx, locations=False)
 
@@ -43,13 +44,18 @@ class VoronoiDiagram(object):
         '''
         v_idx = self.mapping[cell_idx]
 
-        if -1 in self.vor.regions[v_idx]:
-            return []
+        region = [region for region in self.vor.regions[v_idx] if region != -1]
+
+        # if -1 in self.vor.regions[v_idx]:
+        #     return [region for region in self.vor.regions[v_idx] if region != -1]
+        #     print(self.vor.regions[v_idx])
+        #     return []
 
         if locations:
-            return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )
+            return list( map(lambda r: self.vor.vertices[r], region) )
+            # return list( map(lambda r: self.vor.vertices[r], self.vor.regions[v_idx]) )
         else:
-            return self.vor.regions[v_idx]
+            return region
 
     def edges(self):
         return list( filter(lambda ridge: -1 not in ridge, self.vor.ridge_vertices) )  

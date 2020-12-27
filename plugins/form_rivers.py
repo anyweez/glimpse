@@ -117,7 +117,6 @@ def generate(world, vd):
                 return edge[0] in river_set and edge[1] in river_set
 
             if len(river_set) >= MinRiverLength and len(water_cells) > 0:
-                print('adding river')
                 r = River( rivergraph.subgraph(single_river), edges )
 
                 # Add the river to the world
