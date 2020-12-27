@@ -39,10 +39,9 @@ class City(Entity):
 @genreq(cellprops=['elevation', 'celltype', 'biome'])
 def generate(world, vd):
     SampleSize = 6
-    CityCount = random.randint(5, 12)
 
     cultures = [
-        HumanCulture('english', world),
+        ( HumanCulture('english', world), 40 ),
     ]
 
     cities = []
@@ -58,20 +57,29 @@ def generate(world, vd):
             culture.city_economy(region_idx, existing_cells) - \
             culture.city_threat(region_idx, existing_cells)
 
+    def cities_for_culture(cities, culture):
+        return len( list( filter(lambda c: c.culture == culture, cities) ) )
+
     land_cells = numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]
 
-    if len(land_cells) > 0:
-        # Identify the best place to settle based on a sampling of possible cells
-        for _ in range(CityCount):
-            culture = cultures[0]
+    active_cultures = [True for _ in cultures]
 
-            samples = random.choices(land_cells, k=SampleSize)
-            scores = list( map(lambda idx: score(idx, culture), samples) )
+    # Keep settling while there are high-scoring places to settle. Round robin between cultures.
+    while sum(active_cultures) > 0:
+        for culture_idx, (culture, min_score) in enumerate(cultures):
+            if active_cultures[culture_idx]:
+                samples = random.choices(land_cells, k=SampleSize)
+                scores = list( map(lambda idx: score(idx, culture), samples) )
 
-            top_cell_idx = samples[scores.index(max(scores))]
+                # If at least one cell is above the threshold, settle. If not, this
+                # culture is done settling. First settlement gets a pass.
+                if cities_for_culture(cities, culture) == 0 or max(scores) > min_score:
+                    top_cell_idx = samples[scores.index(max(scores))]
 
-            # Add city to the world
-            city = City(top_cell_idx, culture, world)
+                    # Add city to the world
+                    city = City(top_cell_idx, culture, world)
 
-            cities.append(city)
-            world.add_entity(city)
+                    cities.append(city)
+                    world.add_entity(city)
+                else:
+                    active_cultures[culture_idx] = False

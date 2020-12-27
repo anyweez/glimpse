@@ -34,17 +34,14 @@ class HumanCulture(culture.Culture):
         over water as well if convenient. They're willing to traverse significant distances
         on land to trade.
         '''
-        def other_city(dest_idx):
-            return dest_idx in others_idx
-
         # Destination is a water cell
         def other_city(dest_idx):
             return dest_idx in others_idx
 
         (_, dist_to_water_p) = self.world.graph.distance(idx, other_city, max_distance=25)
-        (_, dist_to_land_p) = self.landgraph.distance(idx, other_city, max_distance=100)
+        (_, dist_to_land_p) = self.landgraph.distance(idx, other_city, max_distance=50)
 
-        return max(100.0 - dist_to_land_p, 100.0 - (4 * dist_to_water_p), 0.0)
+        return max(100.0 - (2 * dist_to_land_p), 100.0 - (4 * dist_to_water_p), 0.0)
 
     def city_threat(self, idx, others_idx):
         '''
@@ -56,4 +53,4 @@ class HumanCulture(culture.Culture):
         # Find the distance to the nearest city. The closer, the more dangerous. Only land cells matter.
         (_, dist) = self.landgraph.distance(idx, other_city, max_distance=20)
 
-        return max(100.0 - (dist * 5.0), 0.0)
+        return max(120.0 - (dist * 6.0), 0.0)
