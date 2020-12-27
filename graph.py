@@ -89,7 +89,6 @@ class Graph(object):
         
         return (None, max_distance)
 
-
     def floodfill(self, region_idx):
         '''
         Expand in all directions from `region_idx` as long as new cells satisfy

@@ -1,6 +1,5 @@
 import datetime, random, sys, numpy, pkgutil, importlib, time, os
 import voronoi, graph, renderer, world
-import langserver
 
 import plugins
 
