@@ -174,6 +174,8 @@ class VoronoiDiagram(object):
 def generate(points, n_smooth=3):
     vor = None
 
+    # Make several iterations, using the centroid of the polygons from the previous iteration
+    # as the new point cloud.
     for _ in range(n_smooth):
         vor = Voronoi(points)
         new_points = numpy.zeros(points.shape)
@@ -181,11 +183,17 @@ def generate(points, n_smooth=3):
         for point_idx, region_id in enumerate(vor.point_region):
             region = vor.regions[region_id]
 
+            # If the region is undefined, use the original point. If the region is defined, 
+            # use the centroid of the polygon
             if -1 in region:
                 new_points[point_idx] = points[point_idx]
+            else:
+                centroid = numpy.mean([vor.vertices[idx] for idx in region], 0)
 
-            vertices = [vor.vertices[idx] for idx in region]
-            new_points[point_idx] = numpy.mean(vertices, 0)
+                if centroid[0] >= 0.0 and centroid[0] <= 1.0 and centroid[1] >= 0.0 and centroid[1] <= 1.0:
+                    new_points[point_idx] = centroid
+                else:
+                    new_points[point_idx] = points[point_idx]
 
         points = new_points
     
