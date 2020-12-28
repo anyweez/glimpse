@@ -117,8 +117,7 @@ class FullColorTheme(Theme):
         return list( map(lambda c: (*c, 1.0), colors) )
 
 class PrintTheme(Theme):
-    WaterShallow    = rgba(1, 133, 209, 0.4)
-    WaterDeep       = rgba(3, 119, 188, 0.4)
+    WaterOcean      = (0.72, 0.72, 0.72, 1.0)
     WaterRiver      = rgba(40, 40, 40)
     WaterShore      = rgba(0, 7, 12)
 
@@ -723,6 +722,39 @@ def render_landform(ctx, outline_x, outline_y):
 
     ctx.close_path()
 
+def add_water_shading(ctx, world, vd, theme):
+    '''
+    Add horizontal lines to mark shores. This needs to be done prior to drawing
+    landforms.
+    '''
+    n_lines = 160
+
+    ctx.push_group()
+
+    for i in range(n_lines):
+        ctx.move_to(0, i * (1 / n_lines))
+        ctx.line_to(1, i * (1 / n_lines))
+
+    ctx.set_line_width(0.001)
+    ctx.set_source_rgba(0, 0, 0, 1)
+
+    ctx.stroke()
+
+    for cell_idx in numpy.argwhere(world.cp_celltype == Cell.Type.WATER)[:, 0]:
+        # All cells beyond a configured radius get cleared
+        (_, dist) = world.graph.distance(cell_idx, lambda idx: world.cp_celltype[idx] == Cell.Type.LAND)
+
+        if dist > world.std_density(1.2):
+            region = list( map(lambda pt: transform(pt), vd.get_region(cell_idx)) )
+
+            draw_region(ctx, region, theme.WaterOcean)
+
+    ctx.set_operator(cairo.OPERATOR_CLEAR)
+    ctx.fill()
+
+    ctx.pop_group_to_source()
+    ctx.paint()
+
 def print_render(world, vd, opts):
     def create_surface(fmt):
         if fmt == 'svg':
@@ -743,11 +775,13 @@ def print_render(world, vd, opts):
         ctx = cairo.Context(surface)
         ctx.scale(opts.scale_x, opts.scale_y)
 
+        theme = PrintTheme()
+
         ctx.rectangle(0, 0, 1, 1)
-        ctx.set_source_rgb(0.72, 0.72, 0.72)
+        ctx.set_source_rgba(*theme.WaterOcean)
         ctx.fill()
 
-        theme = PrintTheme()
+        add_water_shading(ctx, world, vd, theme)
 
         # Draw landforms, including lakes
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
@@ -776,10 +810,10 @@ def print_render(world, vd, opts):
             landform_path = ctx.copy_path()
             ctx.fill_preserve()
 
+            # Render elevation shading
             ctx.save()
             ctx.clip()
 
-            # Render elevation shading
             color_sealevel = colour.Color('#fff')
             color_peak = colour.Color('#aaa')
             num_colors = 10
@@ -824,29 +858,13 @@ def print_render(world, vd, opts):
         def between(val, lower, upper):
             return val >= lower and val <= upper
 
-        # Render iconography in geospatial order (top to bottom). Cells cannot have an icon if neighboring cells
-        # already do. This keeps the map from getting overly crowded.
-        # icon_cells = []
-        # def neighbors_have_icon(idx):
-        #     neighbors = world.graph.neighbors(idx)
-
-        #     for neighbor in neighbors:
-        #         if neighbor in icon_cells:
-        #             return True
-
-        #     return False
-
         for idx in idx_latsort:
             if world.cp_forest_id[idx] != -1 and random.random() < 2.0 / world.std_density(2):
                 pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                 render_tree(ctx, pt)
-
-                # icon_cells.append(idx)
             
-            elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(2): # and not neighbors_have_icon(idx):
+            elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(2):
                 render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
-
-                # icon_cells.append(idx)
 
         # Draw entities (stage 2)
         for entity in world.entities():
