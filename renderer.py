@@ -129,7 +129,7 @@ class PrintTheme(Theme):
 
     @staticmethod
     def add_alpha(colors):
-        return list( map(lambda c: (*c, 0.4), colors) )
+        return list( map(lambda c: (*c, 1.0), colors) )
 
 def render(world, cities=[], forests=[], poi_lib=None, rivers={}, names={}, opts=RenderOptions()):
     '''
@@ -728,7 +728,14 @@ def print_render(world, vd, opts):
         if fmt == 'svg':
             return cairo.SVGSurface(opts.filename, opts.scale_x, opts.scale_y)
 
+        if fmt == 'png':
+            return cairo.ImageSurface(cairo.FORMAT_ARGB32, opts.scale_x, opts.scale_y)
+
         return Exception('Unknown image type requested: %s' % (fmt,))
+
+    def close_surface(format, cairo_surface):
+        if format == 'png':
+            surface.write_to_png(opts.filename)
 
     output_fmt = opts.filename[-3:]
 
@@ -737,7 +744,7 @@ def print_render(world, vd, opts):
         ctx.scale(opts.scale_x, opts.scale_y)
 
         ctx.rectangle(0, 0, 1, 1)
-        ctx.set_source_rgb(0.82, 0.82, 0.82)
+        ctx.set_source_rgb(0.72, 0.72, 0.72)
         ctx.fill()
 
         theme = PrintTheme()
@@ -766,9 +773,33 @@ def print_render(world, vd, opts):
             # Render background
             ctx.set_source_rgba(1, 1, 1, 1)
             ctx.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+            landform_path = ctx.copy_path()
             ctx.fill_preserve()
 
+            ctx.save()
+            ctx.clip()
+
+            # Render elevation shading
+            color_sealevel = colour.Color('#fff')
+            color_peak = colour.Color('#aaa')
+            num_colors = 10
+            gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
+
+            waterline_range = 1.0 - world.get_param('WaterlineHeight')
+            for cell_idx in cell_idxs:
+                region = list( map(lambda pt: transform(pt), vd.get_region(cell_idx)) )
+
+                color_pct = (world.cp_elevation[cell_idx] - world.get_param('WaterlineHeight')) / waterline_range
+                color_idx = math.floor(num_colors * color_pct)
+
+                if color_idx != 0:
+                    color = gradient[color_idx]
+                    draw_region(ctx, region, color)
+
+            ctx.restore()
+
             # Render border
+            ctx.append_path(landform_path)
             ctx.set_source_rgba(*PrintTheme.WaterShore)
             ctx.set_line_width(0.0015)
             ctx.set_line_join(cairo.LINE_JOIN_BEVEL)
@@ -793,13 +824,29 @@ def print_render(world, vd, opts):
         def between(val, lower, upper):
             return val >= lower and val <= upper
 
-        for idx in idx_latsort: #map(lambda item: item[0], idx_latsort):
-            if world.cp_forest_id[idx] != -1 and random.random() < 0.5:
+        # Render iconography in geospatial order (top to bottom). Cells cannot have an icon if neighboring cells
+        # already do. This keeps the map from getting overly crowded.
+        # icon_cells = []
+        # def neighbors_have_icon(idx):
+        #     neighbors = world.graph.neighbors(idx)
+
+        #     for neighbor in neighbors:
+        #         if neighbor in icon_cells:
+        #             return True
+
+        #     return False
+
+        for idx in idx_latsort:
+            if world.cp_forest_id[idx] != -1 and random.random() < 2.0 / world.std_density(2):
                 pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                 render_tree(ctx, pt)
+
+                # icon_cells.append(idx)
             
-            elif between( world.cp_elevation[idx], 0.65, 0.8 ) and random.random() < 0.25:
+            elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(2): # and not neighbors_have_icon(idx):
                 render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
+
+                # icon_cells.append(idx)
 
         # Draw entities (stage 2)
         for entity in world.entities():
@@ -834,3 +881,5 @@ def print_render(world, vd, opts):
         for label in labels:
             top_left = transform( (label.position()[0], label.position()[1]) )
             render_text(ctx, top_left, label.text)
+
+        close_surface(output_fmt, surface)
