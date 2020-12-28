@@ -8,13 +8,11 @@ random.seed(seed)
 
 # Configuration variables
 PointCount = 8000      # default = 3500
-NumCities = 8
 NumWorlds = 1
-NumForests = 14
 
-def generate(world_idx, language_list):
+def generate(world_idx):
     def point_cloud(n):
-        return [(random.random(), random.random()) for _ in range(n)]
+        return numpy.random.rand(n, 2)
 
     def generate_world(world, vd):
         available_cellprops = []
@@ -73,7 +71,8 @@ def generate(world_idx, language_list):
             available_cellprops = list( map(lambda k: k[3:], filter(lambda k: k.startswith('cp_'), world.__dict__.keys())) )
             available_worldparams = world.list_params()
 
-    points = numpy.array(point_cloud(PointCount))
+    print('  [------] Generating Voronoi points for world...')
+    points = point_cloud(PointCount)
     vor = voronoi.generate(points)
 
     cell_idxs = [idx for idx in range(PointCount)]
@@ -81,6 +80,7 @@ def generate(world_idx, language_list):
     for cell_idx, v_idx in enumerate( sorted(vor.point_region) ):
         cell_mapping[cell_idx] = v_idx
 
+    print('  [------] Building world graph...')
     worldgraph = graph.BuildGraph(cell_idxs, vor, cell_mapping)
 
     w = world.World(cell_idxs, vor, worldgraph)
@@ -98,16 +98,20 @@ def generate(world_idx, language_list):
     os.mkdir(folder)
 
     # Render 'clean' map without POIs
-    # render_opts = renderer.RenderOptions()
-    # render_opts.filename = 'sample.png'
+    render_opts = renderer.RenderOptions()
+    render_opts.filename = 'sample.png'
     # render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
+
+    print('    * Rendering png...')
+    renderer.print_render(w, vd, render_opts)
 
     # renderer.simple_render(w, vd, render_opts)
 
     print_render_opts = renderer.RenderOptions()
     print_render_opts.filename = 'print.svg'
 
-    renderer.print_render(w, vd, print_render_opts)
+    # print('    * Rendering svg...')
+    # renderer.print_render(w, vd, print_render_opts)
 
     # render_opts_t = renderer.RenderOptions()
     # render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)
@@ -173,13 +177,6 @@ if __name__ == '__main__':
 
     print('')
 
-    print('Building language models...')
-    # langs = languages.load()
-
-    # for lang in langs:
-    #     print('  Language "%s" examples: %s' % (lang.name, [lang.generate_name() for _ in range(8)]))
-    langs = None
-
     print('Generating %d world(s)...' % (NumWorlds,))
     for idx in range(NumWorlds):
-        generate(idx, langs)
+        generate(idx)
