@@ -7,7 +7,7 @@ seed = round( datetime.datetime.now().timestamp() * 10000 )
 random.seed(seed)
 
 # Configuration variables
-PointCount = 8000      # default = 3500
+PointCount = 6000      # default = 3500
 NumWorlds = 1
 
 def generate(world_idx):

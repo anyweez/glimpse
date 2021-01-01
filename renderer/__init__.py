@@ -1,3 +1,5 @@
+from renderer.hill import draw_hill
+
 import enum, cairo, colour, math, random, json, functools, numpy, random
 from plugins.identify_poi import PointOfInterest
 
@@ -783,6 +785,8 @@ def print_render(world, vd, opts):
 
         add_water_shading(ctx, world, vd, theme)
 
+        cell_colors = {} # idx => color
+
         # Draw landforms, including lakes
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
             # Get all cells with the current landform_id
@@ -817,18 +821,27 @@ def print_render(world, vd, opts):
             color_sealevel = colour.Color('#fff')
             color_peak = colour.Color('#aaa')
             num_colors = 10
-            gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )
+            gradient = theme.add_alpha( list( map(lambda c: c.rgb, color_sealevel.range_to(color_peak, num_colors)) ) )                
 
             waterline_range = 1.0 - world.get_param('WaterlineHeight')
+
+            def cell_color(idx):
+                color_pct = (world.cp_elevation[idx] - world.get_param('WaterlineHeight')) / waterline_range
+                color_idx = math.floor(num_colors * color_pct)
+
+                return gradient[color_idx]
+
             for cell_idx in cell_idxs:
                 region = list( map(lambda pt: transform(pt), vd.get_region(cell_idx)) )
 
-                color_pct = (world.cp_elevation[cell_idx] - world.get_param('WaterlineHeight')) / waterline_range
-                color_idx = math.floor(num_colors * color_pct)
+                # color_pct = (world.cp_elevation[cell_idx] - world.get_param('WaterlineHeight')) / waterline_range
+                # color_idx = math.floor(num_colors * color_pct)
 
-                if color_idx != 0:
-                    color = gradient[color_idx]
-                    draw_region(ctx, region, color)
+                cell_colors[cell_idx] = cell_color(cell_idx)
+
+                if cell_colors[cell_idx] != gradient[0]:
+                    # color = gradient[color_idx]
+                    draw_region(ctx, region, cell_colors[cell_idx])
 
             ctx.restore()
 
@@ -864,7 +877,13 @@ def print_render(world, vd, opts):
                 render_tree(ctx, pt)
             
             elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(2):
-                render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
+                # render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
+
+                pos = transform((world.cp_longitude[idx], world.cp_latitude[idx]))
+
+                draw_hill(ctx, pos, {
+                    'fill_color': cell_colors[idx],
+                })
 
         # Draw entities (stage 2)
         for entity in world.entities():
