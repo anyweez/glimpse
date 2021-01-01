@@ -8,6 +8,8 @@ from xmlrpc.server import SimpleXMLRPCRequestHandler
 ServerHost = 'localhost'
 ServerPort = 8050
 
+reject_list = ['cock',]
+
 def GetClient():
     return ServerProxy('http://%s:%d' % (ServerHost, ServerPort))
 
@@ -82,6 +84,9 @@ def start_server():
 
             if language in langmodels:
                 base = langmodels[language]()
+
+                while base in reject_list:
+                    base = langmodels[language]()
 
                 while not valid_basename(base):
                     print('  Rejecting: {}'.format(base))
