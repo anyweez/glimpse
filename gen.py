@@ -102,7 +102,7 @@ def generate(world_idx):
     render_opts.filename = 'sample.png'
     # render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
 
-    print('    * Rendering png...')
+    print('   * Rendering png...')
     renderer.print_render(w, vd, render_opts)
 
     # renderer.simple_render(w, vd, render_opts)

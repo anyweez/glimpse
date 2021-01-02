@@ -45,26 +45,22 @@ def draw_hill(ctx, pos, cell_ctx):
     ctx.stroke()
 
 
-    # Shading
+    # Highlight on right-hand side
     a_x = (
         0.001+ a[0] + (width / 2), 
         0.0005 + (a[1] + b[1]) / 2,
     )
 
     d_x = (
-        d[0] - 0.002, # potentially 0.006 
+        d[0] - 0.002,
         d[1] - 0.001
     )
 
     ctx.move_to(*a_x)
     ctx.curve_to(
-        # common.add_p(a_x[0], 0.05),
         a_x[0] + 0.002,
-        # common.add_p(a_x[1], 0.02),
         a_x[1] + 0.001, 
-        # common.add_p(d_x[0], -0.10),
         d_x[0] - 0.002, 
-        # common.add_p(d_x[0], -0.10),
         d_x[1] - 0.002, 
         *d_x,
     )
