@@ -1,17 +1,18 @@
 import random
 import languages
 
-from xmlrpc.client import ServerProxy
+import langserver_conf as lsc
+
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 
-ServerHost = 'localhost'
-ServerPort = 8050
+# ServerHost = 'localhost'
+# ServerPort = 8050
 
 reject_list = ['cock',]
 
-def GetClient():
-    return ServerProxy('http://%s:%d' % (ServerHost, ServerPort))
+# def GetClient():
+#     return ServerProxy('http://%s:%d' % (ServerHost, ServerPort))
 
 # Restrict to a particular path.
 class RequestHandler(SimpleXMLRPCRequestHandler):
@@ -57,7 +58,7 @@ def start_server():
     print('Loading languages...')
 
     # Create server
-    with SimpleXMLRPCServer((ServerHost, ServerPort), requestHandler=RequestHandler) as server:
+    with SimpleXMLRPCServer((lsc.ServerHost, lsc.ServerPort), requestHandler=RequestHandler) as server:
         server.register_introspection_functions()
 
         # Load all language models

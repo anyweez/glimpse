@@ -1,6 +1,6 @@
-import langserver
+import langserver_conf as lsc
 
-lc = langserver.GetClient()
+lc = lsc.GetClient()
 
 class Entity(object):
     def __init__(self, graph, name=None):
