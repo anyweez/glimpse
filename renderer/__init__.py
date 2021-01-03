@@ -1,4 +1,5 @@
 from renderer.hill import draw_hill
+from renderer.mountain import draw_mountain
 
 import enum, cairo, colour, math, random, numpy, random
 from plugins.identify_poi import PointOfInterest
@@ -455,7 +456,7 @@ def print_render(world, vd, opts):
                 pt = transform( (world.cp_longitude[idx], world.cp_latitude[idx]) )
                 render_tree(ctx, pt)
             
-            elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(2):
+            elif between( world.cp_elevation[idx], 0.6, 0.75 ) and random.random() < 1.0 / world.std_density(3):
                 # render_hill(ctx, (world.cp_longitude[idx], world.cp_latitude[idx]))
 
                 pos = transform((world.cp_longitude[idx], world.cp_latitude[idx]))
@@ -463,6 +464,24 @@ def print_render(world, vd, opts):
                 draw_hill(ctx, pos, {
                     'fill_color': cell_colors[idx],
                 })
+
+            elif between( world.cp_elevation[idx], 0.75, 1.0 ) and random.random() < 1.0 / world.std_density(2):
+                # Don't render hills near water
+                _, distance = world.graph.distance(
+                    idx, 
+                    lambda d_idx: world.cp_celltype[d_idx] == Cell.Type.WATER, 
+                    max_distance=4,
+                )
+
+                if distance > 3:
+                    pos = transform((world.cp_longitude[idx], world.cp_latitude[idx]))
+
+                    ctx.save()
+                    draw_mountain(ctx, pos, {
+                        'fill_color': (0.90, 0.90, 0.90),
+                        'width': 0.03,
+                    })
+                    ctx.restore()
 
         # Draw entities (stage 2)
         for entity in world.entities():

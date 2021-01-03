@@ -36,8 +36,6 @@ def run():
         for x in range(col_count):
             x_pos = (padding / 2) + (x_delta * x) + (5 * x)
 
-            print((x_pos, y_pos))
-            
             ctx.rectangle(
                 x_pos - (mountain_width / 2), 
                 y_pos - mountain_width, 

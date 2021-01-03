@@ -176,8 +176,8 @@ def draw_mountain(ctx, pos, cell_ctx):
     width = cell_ctx['width']
     height = width / 1.36 # ratio (300:220 during design phase)
 
-    outline_width = 1
-    ridgeline_max_noise = 0.1
+    outline_width = width / 20
+    ridgeline_max_noise = width / 300
     ridgeline_dx = width * (random.random() * ridgeline_max_noise)
 
     # Basic form
@@ -197,7 +197,7 @@ def draw_mountain(ctx, pos, cell_ctx):
     if random.random() < 0.5:
         right.add_joint(right.rand_idx(), width * 0.10)
 
-    ctx.set_source_rgb(0, 0, 0)
+    ctx.set_source_rgb(0.1, 0.1, 0.1)
 
     _draw_line(ctx, left.get_joints(), outline_width)
     _draw_line(ctx, right.get_joints(), outline_width)
@@ -214,10 +214,10 @@ def draw_mountain(ctx, pos, cell_ctx):
     dark_region = left.get_joints() + ridge.get_joints() + [left.get_joints()[0],]
     _shade_region(ctx, dark_region, common.add_color(fill_color, -0.1))
 
-    ctx.set_source_rgb(0.25, 0.25, 0.25)
+    ctx.set_source_rgb(0.5, 0.5, 0.5)
     ctx.set_line_width(outline_width * 0.6)
     _draw_diagonals(ctx, bl_pt, tc_pt, dark_region)
 
     # Render ridgeline
-    ctx.set_source_rgb(0, 0, 0)
+    ctx.set_source_rgb(0.2, 0.2, 0.2)
     _draw_line(ctx, ridge.get_joints(), outline_width * 0.8)
