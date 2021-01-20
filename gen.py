@@ -3,9 +3,6 @@ import voronoi, graph, renderer, world
 
 import plugins
 
-seed = round( datetime.datetime.now().timestamp() * 10000 )
-random.seed(seed)
-
 # Configuration variables
 PointCount = 12000      # default = 3500
 NumWorlds = 1
@@ -57,7 +54,14 @@ def generate(world_idx):
             available_plugins = list( filter(is_ready, plugin_queue) )
 
             for pl in available_plugins:
-                print('   * [%d / %d] Running %s...\t' % (plugin_count - len(plugin_queue) + 1, plugin_count, pl.__name__), end='', flush=True)
+                print('   * [{} / {}] Running {}...\t'.format(
+                        plugin_count - len(plugin_queue) + 1,
+                        plugin_count,
+                        pl.__name__
+                    ),
+                    end='',
+                    flush=True,
+                )
 
                 start_ts = time.time() * 1000
                 pl.generate(world, vd)
@@ -70,6 +74,10 @@ def generate(world_idx):
             
             available_cellprops = list( map(lambda k: k[3:], filter(lambda k: k.startswith('cp_'), world.__dict__.keys())) )
             available_worldparams = world.list_params()
+
+    # Seed RNG once per iteration
+    seed = round( datetime.datetime.now().timestamp() * 10000 )
+    random.seed(seed)
 
     print('  [------] Generating Voronoi points for world...')
     points = point_cloud(PointCount)
@@ -87,96 +95,35 @@ def generate(world_idx):
     vd = voronoi.VoronoiDiagram(vor, cell_mapping)
     
     # Generate the world
-    print('  [%s] Generating world #%d...' % (w.id, world_idx + 1))
+    print('  [{}] Generating world #{}...'.format(w.id, world_idx + 1))
     generate_world(w, vd)
 
-    ## Render
-    print('  [%s] Rendering world...' % (w.id,))
+    ## Render one or more images
+    print('  [{}] Rendering world...'.format(w.id))
 
     folder = 'gallery/%s' % (str(datetime.datetime.now()),)
-
     os.mkdir(folder)
 
-    # Render 'clean' map without POIs
     render_opts = renderer.RenderOptions()
-    render_opts.filename = 'sample.png'
-    # render_opts.filename = '%s/%d.full.png' % (folder, world_idx,)
+    # render_opts.filename = 'sample.png'
+    render_opts.filename = 'batch/{}.png'.format(w.id)
 
-    print('   * Rendering png...')
+    print('   * Rendering png ({})...'.format(render_opts.filename))
     renderer.print_render(w, vd, render_opts)
 
-    # renderer.simple_render(w, vd, render_opts)
-
-    print_render_opts = renderer.RenderOptions()
-    print_render_opts.filename = 'print.svg'
+    # print_render_opts = renderer.RenderOptions()
+    # print_render_opts.filename = 'print.svg'
 
     # print('    * Rendering svg...')
     # renderer.print_render(w, vd, print_render_opts)
 
-    # render_opts_t = renderer.RenderOptions()
-    # render_opts_t.filename = '%s/%d.temperature.png' % (folder, world_idx,)
-    # renderer.heatmap(w, vd, render_opts_t, render_opts.filename, lambda idx: w.cp_temperature[idx])
-
-    # render_opts_m = renderer.RenderOptions()
-    # render_opts_m.filename = '%s/%d.moisture.png' % (folder, world_idx,)
-    # renderer.heatmap(w, vd, render_opts_m, render_opts.filename, lambda idx: w.cp_moisture[idx])
-
-    # renderer.render(
-    #     world, 
-    #     cities=cities, 
-    #     forests=forests,
-    #     rivers=rivers,
-    #     opts=render_opts,
-    # )
-
-    # Render map with POIs highlighted
-    # render_opts_poi = renderer.RenderOptions()
-    # render_opts_poi.filename = 'world-%s_poi.png' % (world.id,)
-    # render_opts_poi.highlight_poi = True
-
-    # renderer.render(
-    #     world, 
-    #     cities=cities, 
-    #     forests=forests,
-    #     rivers=rivers,
-    #     poi_lib=poi_lib,
-    #     opts=render_opts_poi,
-    # )
-
-    # Render map with print theme
-    # render_opts_print = renderer.RenderOptions()
-    # render_opts_print.filename = 'world_print.png' # % (world.id,)
-    # render_opts_print.theme = 'print'
-
-    # renderer.render(
-    #     world, 
-    #     cities=cities, 
-    #     forests=forests,
-    #     rivers=rivers,
-    #     opts=render_opts_print,
-    # )
-
-    # Render SVG
-    # render_opts_svg = renderer.RenderOptions()
-    # render_opts_svg.filename = 'gallery/maps/world-%s.svg' % (world.id,)
-
-    # renderer.render(
-    #     world, 
-    #     cities=cities, 
-    #     forests=forests,
-    #     rivers=rivers,
-    #     names=names,
-    #     poi_lib=poi_lib,
-    #     opts=render_opts_svg,
-    # )
-
 if __name__ == '__main__':
-    print('seed=%d, num_points=%d' % (seed, PointCount))
     if len(sys.argv) > 1:
         NumWorlds = int(sys.argv[1])
 
+    print('num_worlds={}, num_points={}'.format(NumWorlds, PointCount))
     print('')
 
-    print('Generating %d world(s)...' % (NumWorlds,))
+    print('Generating world(s)...')
     for idx in range(NumWorlds):
         generate(idx)

@@ -109,8 +109,8 @@ def generate(world, vd):
 
         return world.cp_celltype[src] == Cell.Type.LAND and \
             world.cp_celltype[dest] == Cell.Type.LAND and \
-            world.cp_elevation[src] > 0.6 and \
-            world.cp_elevation[dest] > 0.6
+            world.cp_elevation[src] >= world.get_param('MountainMinHeight') and \
+            world.cp_elevation[dest] >= world.get_param('MountainMinHeight')
 
     watergraph = world.graph.subgraph(edge_filter_water)
     mountaingraph = world.graph.subgraph(edge_filter_mountain)

@@ -32,3 +32,5 @@ def generate(world, vd):
 
     world.add_cell_property('latitude', latitude_arr)
     world.add_cell_property('longitude', longitude_arr)
+
+    world.set_param('MountainMinHeight', 0.75)

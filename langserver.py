@@ -22,6 +22,7 @@ def valid_basename(base):
     def is_vowel(char):
         return char in ['a', 'e', 'i', 'o', 'u', 'y']
 
+    base = base.lower()
     vowels = ''.join( ['1' if is_vowel(char) else '0' for char in base] )
 
     # Name can't have three consonants in a rule; these are usually unpronounceable
@@ -86,7 +87,7 @@ def start_server():
             if language in langmodels:
                 base = langmodels[language]()
 
-                while base in reject_list:
+                while base.lower() in reject_list:
                     base = langmodels[language]()
 
                 while not valid_basename(base):

@@ -129,16 +129,19 @@ class PrintTheme(Theme):
     CityBorderWidth = 0.0035
     CityRadius      = 0.005
 
+    LabelFont       = 'Optima'
+    LabelFontSize   = 0.014
+
     @staticmethod
     def add_alpha(colors):
         return list( map(lambda c: (*c, 1.0), colors) )
 
 def label_dim(ctx, text):
-    ctx.select_font_face('Gill Sans', 
+    ctx.select_font_face(PrintTheme.LabelFont, 
         cairo.FONT_SLANT_NORMAL,
         cairo.FONT_WEIGHT_NORMAL
     )
-    ctx.set_font_size(0.014)
+    ctx.set_font_size(PrintTheme.LabelFontSize)
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
@@ -225,15 +228,15 @@ def rectangles_conflict(r1, r2):
 def render_text(ctx, top_left, text, font_size=12):
     ctx.move_to(*top_left)
 
-    ctx.select_font_face('Gill Sans', 
+    ctx.select_font_face(PrintTheme.LabelFont, 
         cairo.FONT_SLANT_NORMAL,
         cairo.FONT_WEIGHT_NORMAL
     )
-    ctx.set_font_size(0.014)
+    ctx.set_font_size(PrintTheme.LabelFontSize)
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
-    ctx.set_source_rgba(1, 1, 1, 0.6)
+    ctx.set_source_rgba(1, 1, 1, 0.8)
     ctx.rectangle(
         top_left[0] - 0.005, top_left[1] - height - 0.005, 
         width + 0.01, height + 0.01
@@ -363,11 +366,13 @@ def print_render(world, vd, opts):
         ctx.set_source_rgba(*theme.WaterOcean)
         ctx.fill()
 
+        print('   * [1 / X] Adding water shading...')
         add_water_shading(ctx, world, vd, theme)
 
         cell_colors = {} # idx => color
 
         # Draw landforms, including lakes
+        print('   * [2 / X] Drawing landforms...')
         for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
             # Get all cells with the current landform_id
             cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
@@ -435,6 +440,7 @@ def print_render(world, vd, opts):
             ctx.stroke()
 
         # Draw entities (stage 1)
+        print('   * [3 / X] Rendering iconography...')
         for entity in world.entities():        
             try:
                 entity.render_stage1(ctx, world, vd, theme)
@@ -465,10 +471,10 @@ def print_render(world, vd, opts):
                     'fill_color': cell_colors[idx],
                 })
 
-            elif between( world.cp_elevation[idx], 0.75, 1.0 ) and random.random() < 1.0 / world.std_density(2):
+            elif between( world.cp_elevation[idx], world.get_param('MountainMinHeight'), 1.0 ) and random.random() < 1.0 / world.std_density(2):
                 # Don't render hills near water
                 _, distance = world.graph.distance(
-                    idx, 
+                    idx,
                     lambda d_idx: world.cp_celltype[d_idx] == Cell.Type.WATER, 
                     max_distance=4,
                 )
@@ -491,6 +497,7 @@ def print_render(world, vd, opts):
                 pass
                 
         # Place labels
+        print('   * [4 / X] Placing labels...')
         labels = []
         for entity in world.entities():
             # TODO: remove once we want to render mountain labels (once they're being rendered)

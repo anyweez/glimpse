@@ -6,3 +6,6 @@ __pycache__
 gallery/maps
 world-*.png
 heightmap.png
+
+*.svg
+*.png
