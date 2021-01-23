@@ -149,10 +149,11 @@ def label_dim(ctx, text):
     return (width + 0.01, height + 0.02)
 
 class Label(object):
-    def __init__(self, anchor, dim, text):
+    def __init__(self, anchor, dim, text, font_scale):
         self.anchor = anchor    # The point the label is labeling
         self.dim = dim          # The size of the label
         self.text = text
+        self.font_scale = font_scale
 
         x, y = self.anchor
         w, h = self.dim
@@ -225,14 +226,14 @@ def rectangles_conflict(r1, r2):
 
     return True 
 
-def render_text(ctx, top_left, text, font_size=12):
+def render_text(ctx, top_left, text, font_scale=1.0):
     ctx.move_to(*top_left)
 
     ctx.select_font_face(PrintTheme.LabelFont, 
         cairo.FONT_SLANT_NORMAL,
         cairo.FONT_WEIGHT_NORMAL
     )
-    ctx.set_font_size(PrintTheme.LabelFontSize)
+    ctx.set_font_size(PrintTheme.LabelFontSize * font_scale)
 
     (x, y, width, height, dx, dy) = ctx.text_extents(text)
 
@@ -506,7 +507,12 @@ def print_render(world, vd, opts):
                     x, y = world.cp_longitude[entity.cell_idx], world.cp_latitude[entity.cell_idx]
                     w, h = label_dim(ctx, entity.name)
 
-                    labels.append( Label((x, y), (w, h), entity.name) )
+                    font_scale = 1.0
+
+                    if isinstance(entity, City):
+                        font_scale -= ((entity.MaxSize - entity.size()) / entity.MaxSize) * 0.3
+
+                    labels.append( Label((x, y), (w, h), entity.name, font_scale) )
 
         # Optimize label positions
         iter_count = 0
@@ -522,6 +528,6 @@ def print_render(world, vd, opts):
         # Render optimized labels
         for label in labels:
             top_left = transform( (label.position()[0], label.position()[1]) )
-            render_text(ctx, top_left, label.text)
+            render_text(ctx, top_left, label.text, label.font_scale)
 
         close_surface(output_fmt, surface)

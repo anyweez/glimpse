@@ -72,7 +72,7 @@ def generate(world, vd):
     GrowthIterations = 10
 
     cultures = [
-        ( HumanCulture('english', world), 20 ),
+        ( HumanCulture('english', world), 25 ),
     ]
 
     cities = []
