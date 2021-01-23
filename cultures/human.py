@@ -54,3 +54,22 @@ class HumanCulture(culture.Culture):
         (_, dist) = self.landgraph.distance(idx, other_city, max_distance=20)
 
         return max(120.0 - (dist * 6.0), 0.0)
+
+    
+    def carrying_capacity(self, cell_idx):
+        '''
+        The lower the elevation the more beneficial the cell is.
+        '''
+        return 10000 * (1 - self.world.cp_elevation[cell_idx])
+
+    def desirability(self, city):
+        # Ideal population size is 2500. The further you get away, the less desirable the city
+        # becomes.
+        pop_discount = min( abs(2500 - city.population) / 3000, 1.0)
+
+        return 1 - pop_discount
+
+    def pop_change(self, base_pop, carry_cap):
+        delta = base_pop * ( 1 - ( base_pop / carry_cap ) )
+
+        return base_pop + delta

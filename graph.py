@@ -49,6 +49,16 @@ class Graph(object):
         for edge in self.ig.get_edgelist():
             yield edge
 
+    def all_within(self, region_idx, radius):
+        idxs = set()
+
+        for dist in range(1, radius):
+            nodes = self.neighbors(region_idx, dist)
+
+            idxs.update(nodes)
+        
+        return list(idxs)
+
     def neighbors(self, region_idx, dist=1):
         '''
         Find all neighbors @ distance `dist` for the specified node.

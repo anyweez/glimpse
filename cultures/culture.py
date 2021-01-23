@@ -19,3 +19,12 @@ class Culture(object):
 
     def city_threat(self, idx, other_idx):
         raise NotImplementedError()
+
+    def carrying_capacity(self, cell_idx):
+        raise NotImplementedError()
+
+    def pop_change(self, base_pop, desirability):
+        raise NotImplementedError()
+
+    def desirability(self, city):
+        raise NotImplementedError()
