@@ -2,6 +2,7 @@ __pycache__
 .coverage
 .DS_Store
 .vscode
+.env
 
 gallery/maps
 world-*.png
@@ -9,3 +10,8 @@ heightmap.png
 
 *.svg
 *.png
+*.tif
+
+node_modules
+package.json
+package-lock.json

@@ -4,7 +4,7 @@ import voronoi, graph, renderer, world
 import plugins
 
 # Configuration variables
-PointCount = 8000      # default = 3500
+PointCount = 4000      # default = 3500
 NumWorlds = 1
 
 def generate(world_idx):
@@ -105,11 +105,14 @@ def generate(world_idx):
     os.mkdir(folder)
 
     render_opts = renderer.RenderOptions()
-    render_opts.filename = 'sample.png'
-    # render_opts.filename = 'batch/{}.png'.format(w.id)
+    render_opts.filename = 'batch/{}.png'.format(w.id)
 
-    print('   * Rendering png ({})...'.format(render_opts.filename))
-    renderer.print_render(w, vd, render_opts)
+    # print('   * Rendering png ({})...'.format(render_opts.filename))
+    # renderer.print_render(w, vd, render_opts)
+
+    print('Calculating geographic representations (PostGIS)....')
+    renderer.geo(w, vd, None)
+    print('\rdone')
 
     # print_render_opts = renderer.RenderOptions()
     # print_render_opts.filename = 'print.svg'

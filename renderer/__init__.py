@@ -1,15 +1,18 @@
 from renderer.hill import draw_hill
 from renderer.mountain import draw_mountain
+from shapely.geometry import Point, Polygon
+from sqlalchemy import create_engine
+from osgeo import gdal, osr
 
-import enum, cairo, colour, math, random, numpy, random
+# import matplotlib.pyplot as plt
+
+import enum, cairo, colour, math, random, numpy, random, geopandas
 from plugins.identify_poi import PointOfInterest
 
-# import xml.etree.ElementTree as ET
-# from PIL import Image
 from scipy import interpolate
-# from scipy.spatial import distance
 from world import Cell
 from plugins.build_cities import City
+from plugins.mark_biome import biomes
 
 class RenderOptions(object):
     CellColorMode = enum.Enum('CellColorMode', 'ELEVATION')
@@ -249,6 +252,9 @@ def render_text(ctx, top_left, text, font_scale=1.0):
     ctx.show_text(text)
 
 def inter(vals):
+    '''
+    Interpolate the corner points into a smoother line.
+    '''
     x_axis = list( range(0, len(vals)) )
 
     f = interpolate.interp1d(x_axis, vals, kind='quadratic')
@@ -330,7 +336,7 @@ def add_water_shading(ctx, world, vd, theme):
         # All cells beyond a configured radius get cleared
         (_, dist) = world.graph.distance(cell_idx, lambda idx: world.cp_celltype[idx] == Cell.Type.LAND)
 
-        if dist > world.std_density(1.2):
+        if dist > world.std_density(0.6):
             region = list( map(lambda pt: transform(pt), vd.get_region(cell_idx)) )
 
             draw_region(ctx, region, theme.WaterOcean)
@@ -531,3 +537,132 @@ def print_render(world, vd, opts):
             render_text(ctx, top_left, label.text, label.font_scale)
 
         close_surface(output_fmt, surface)
+
+GIS_CRS = 'EPSG:4326'
+
+def proj_x(base_x):
+    return (base_x * 360.0) - 180
+
+def proj_y(base_y):
+    return (base_y * 180.0) - 90.0
+
+# def elevation_map(world, vd):
+#     '''
+#     Generate a GeoTIFF elevation map (`resolution` x `resolution`) based on the
+#     elevation of the closest cell.
+
+#     '''
+#     resolution = int( math.sqrt(world.get_cellcount()) ) * 2
+
+#     elevation = numpy.zeros((resolution, resolution), dtype=numpy.float)
+#     dx = 1.0 / resolution   # divide full width by resolution
+#     dy = 1.0 / resolution   # divide full height by resolution
+
+#     for y_idx in range(resolution):
+#         for x_idx in range(resolution):
+#             x = dx * x_idx
+#             y = dy * y_idx
+
+#             cell_idx = vd.find_cell(x, y)
+#             elevation[y_idx, x_idx] = 7000 * world.cp_elevation[cell_idx] # int( world.cp_elevation[cell_idx] * 255 )
+
+#     img = gdal.GetDriverByName('GTiff').Create('world.tiff', resolution, resolution, 1, gdal.GDT_Float32)
+#     img.SetGeoTransform( (-180, 360.0 / resolution, 0, 90, 0, -1 * 180.0 / resolution) )
+
+#     srs = osr.SpatialReference()
+#     srs.ImportFromEPSG(4326)
+
+#     img.SetProjection(srs.ExportToWkt())
+#     img.GetRasterBand(1).WriteArray(elevation)
+#     img.FlushCache()    # write image to disk
+
+def geo(world, vd, opts):
+    polygons = []
+    # Calculate polygons for each continent
+    for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
+        # Get all cells with the current landform_id
+        cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
+
+        for polygon in vd.outline_polygons(cell_idxs):
+            outline_x = []
+            outline_y = []
+
+            for segment in polygon:
+                outline_x.append(segment[0][0])
+                outline_y.append(segment[0][1])
+
+            outline_x.append(outline_x[0])
+            outline_y.append(outline_y[0])
+
+            # _, outline_x = inter(outline_x)
+            # _, outline_y = inter(outline_y)
+    
+            # Naive scale to lat/long
+            outline_x = [proj_x(x) for x in outline_x]
+            outline_y = [proj_y(y) for y in outline_y]
+
+            geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
+            polygons.append(Polygon(geometry))
+
+    # Prep PostGIS for continents
+    engine = create_engine('postgres://localhost:5432/glimpse')
+    engine.execute('drop table if exists continents')
+    engine.execute('drop table if exists lakes')
+
+    for polygon in polygons:
+        series = geopandas.GeoSeries(polygon, crs=GIS_CRS)
+        gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
+
+        # Check if `polygon` is a continent or lake; the polygon is a lake if its
+        # fully contained within another polygon.
+        # TODO: can we use existing entities to identify lakes instead of re-deriving?
+        is_continent = True
+        for target in [p for p in polygons if p != polygon]:
+            if target.contains(polygon):
+                is_continent = False # lake, not continent
+
+        if is_continent:
+            gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
+            gdf.to_postgis(name='continents', con=engine, if_exists='append')
+        else:
+            gdf['name'] = 'Lake'
+            gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+
+    # Prep PostGIS for cities
+    engine.execute('drop table if exists cities')
+
+    for entity in world.entities():
+        # TODO: remove once we want to render mountain labels (once they're being rendered)
+        if isinstance(entity, City):
+            city_loc = Point(
+                proj_x( world.cp_longitude[entity.cell_idx] ), 
+                proj_y( world.cp_latitude[entity.cell_idx] ),
+            )
+
+            series = geopandas.GeoSeries(city_loc, crs=GIS_CRS)
+            gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
+            gdf['name'] = entity.name
+            gdf['pop_size'] = entity.size()
+
+            gdf.to_postgis(name='cities', con=engine, if_exists='append')
+
+    # Prep PostGIS for biomes
+    engine.execute('drop table if exists biomes')
+
+    for cell_idx in [idx for idx in world.cell_idxs() if world.cp_celltype[idx] == Cell.Type.LAND]:
+        region = [ (proj_x(x), proj_y(y)) for (x, y) in vd.get_region(cell_idx) ]
+
+        # vd.get_region() returns an empty list if the cell is out of bounds
+        if len(region) > 0:
+            biome = biomes[world.cp_biome[cell_idx]].name
+
+            polygon = Polygon(region)
+            series = geopandas.GeoSeries(polygon, crs=GIS_CRS)
+            gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
+            gdf['biome'] = biome
+
+            gdf.to_postgis(name='biomes', con=engine, if_exists='append')
+
+
+    # elevation_map(world, vd)
+    # print('Wrote elevation map to world.tiff')

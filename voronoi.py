@@ -1,6 +1,6 @@
 import numpy
 
-from scipy.spatial import Voronoi
+from scipy.spatial import Voronoi, KDTree
 
 class VoronoiDiagram(object):
     def __init__(self, vor, mapping):
@@ -33,6 +33,14 @@ class VoronoiDiagram(object):
                     self.cells_with_vertex[vertex_id] = set()
 
                 self.cells_with_vertex[vertex_id].add(cell_idx)
+        
+        # Populate KD-Tree for fast find_cell() below -- use self.center points
+        # for each cell. Index in list = cell_idx
+        centers = [None] * len(self.center)
+        for cell_idx, center_pt in self.center.items():
+            centers[cell_idx] = center_pt
+
+        self.kdtree = KDTree(centers)
 
     def get_region(self, cell_idx, locations=True):
         '''
@@ -67,20 +75,27 @@ class VoronoiDiagram(object):
         return self.vor.vertices[vertex_id]
 
     def find_cell(self, x, y):
-        shortest_dist = 100.0
-        shortest_idx = -1
+        '''
+        Find the cell whose center is closest to the provided point.
+        '''
+        (_, idx) = self.kdtree.query((x, y), k=1)
 
-        for cell_idx in self.mapping.keys():
-            center = self.center[cell_idx]
+        return idx
 
-            if center is not None:
-                dist = abs(x - center[0]) + abs(y - center[1])
+        # shortest_dist = 100.0
+        # shortest_idx = -1
 
-                if dist < shortest_dist:
-                    shortest_dist = dist
-                    shortest_idx = cell_idx
+        # for cell_idx in self.mapping.keys():
+        #     center = self.center[cell_idx]
+
+        #     if center is not None:
+        #         dist = abs(x - center[0]) + abs(y - center[1])
+
+        #         if dist < shortest_dist:
+        #             shortest_dist = dist
+        #             shortest_idx = cell_idx
         
-        return shortest_idx
+        # return shortest_idx
 
     def outline(self, cell_idxs):
         ridges = []

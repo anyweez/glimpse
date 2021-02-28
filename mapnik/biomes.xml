@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Map srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over">
+  <Style name="Biomes">
+    <Rule>
+        <Filter>[biome] = "Tundra"</Filter>
+        <PolygonSymbolizer fill="#a6bddb" fill-opacity="0.4" />
+    </Rule>
+    <Rule>
+        <Filter>[biome] = "Boreal forest"</Filter>
+        <PolygonSymbolizer fill="#1c9099" fill-opacity="0.4" />
+    </Rule>
+    <Rule>
+        <Filter>[biome] = "Temperate grassland"</Filter>
+        <PolygonSymbolizer fill="#addd8e" fill-opacity="0.4" />
+    </Rule>
+    <Rule>
+        <Filter>[biome] = "Temperate forest"</Filter>
+        <PolygonSymbolizer fill="#31a354" fill-opacity="0.4" />
+    </Rule>
+    <Rule>
+        <Filter>[biome] = "Desert"</Filter>
+        <PolygonSymbolizer fill="#f7fcb9" fill-opacity="0.4" />
+    </Rule>
+    <Rule>
+        <Filter>[biome] = "Rainforest"</Filter>
+        <PolygonSymbolizer fill="#31a354" fill-opacity="0.4" />
+    </Rule>
+  </Style>
+
+  <Layer name="biomes" srs="+init=epsg:4326">
+    <StyleName>Biomes</StyleName>
+    <Datasource>
+        <Parameter name="type">postgis</Parameter>
+        <Parameter name="host">localhost</Parameter>
+        <Parameter name="dbname">glimpse</Parameter>
+        <Parameter name="geometry_field">geometry</Parameter>
+        <Parameter name="table">biomes</Parameter>
+        <Parameter name="extent">-180,-90,180,90</Parameter>
+    </Datasource>
+  </Layer>
+
+</Map>

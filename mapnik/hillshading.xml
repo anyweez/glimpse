@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Map srs="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs +over">
+  <Style name="Hillshading">
+    <Rule>
+      <RasterSymbolizer opacity="1" scaling="bilinear" mode="normal" />
+    </Rule>
+  </Style>
+
+  <Layer name="hillshading" srs="+init=epsg:4326">
+    <StyleName>Hillshading</StyleName>
+    <Datasource>
+      <Parameter name="type">gdal</Parameter>
+      <Parameter name="file">../world-proj.tiff</Parameter>
+    </Datasource>
+  </Layer>
+</Map>

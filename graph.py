@@ -50,13 +50,17 @@ class Graph(object):
             yield edge
 
     def all_within(self, region_idx, radius):
+        '''
+        Get all neighbors within a distance of `radius`.
+        '''
         idxs = set()
 
-        for dist in range(1, radius):
-            nodes = self.neighbors(region_idx, dist)
+        for (vertex, vert_dist, _) in self.ig.bfsiter(int(region_idx), advanced=True):
+            if vert_dist <= radius:
+                idxs.add(vertex.index)
+            else:
+                break
 
-            idxs.update(nodes)
-        
         return list(idxs)
 
     def neighbors(self, region_idx, dist=1):
