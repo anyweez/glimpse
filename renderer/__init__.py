@@ -1,6 +1,7 @@
 from renderer.hill import draw_hill
 from renderer.mountain import draw_mountain
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, LineString
+from shapely import affinity, ops
 from sqlalchemy import create_engine
 from osgeo import gdal, osr
 
@@ -576,33 +577,224 @@ def proj_y(base_y):
 #     img.GetRasterBand(1).WriteArray(elevation)
 #     img.FlushCache()    # write image to disk
 
+# FROM https://towardsdatascience.com/around-the-world-in-80-lines-crossing-the-antimeridian-with-python-and-shapely-c87c9b6e1513
+import math
+import copy
+import json
+from typing import Union, List
+from shapely.geometry import Polygon, LineString, GeometryCollection
+from shapely.ops import split
+
+from typing import Union, List
+from shapely.geometry import mapping, Polygon, GeometryCollection
+from shapely import affinity
+
+def check_crossing(lon1: float, lon2: float, validate: bool = True):
+    """
+    Assuming a minimum travel distance between two provided longitude coordinates,
+    checks if the 180th meridian (antimeridian) is crossed.
+    """
+    if validate and any(abs(x) > 180.0 for x in [lon1, lon2]):
+        raise ValueError("longitudes must be in degrees [-180.0, 180.0]")   
+    return abs(lon2 - lon1) > 180.0
+
+def translate_polygons(geometry_collection: GeometryCollection, 
+                       output_format: str = "geojson") -> Union[List[dict], List[Polygon]]:
+    
+  for polygon in geometry_collection:
+      (minx, _, maxx, _) = polygon.bounds
+      if minx < -180: geo_polygon = affinity.translate(polygon, xoff = 360)
+      elif maxx > 180: geo_polygon = affinity.translate(polygon, xoff = -360)
+      else: geo_polygon = polygon
+
+      yield json.dumps(mapping(geo_polygon)) if (output_format == "geojson") else geo_polygon
+
+
+# https://gist.github.com/PawaritL/ec7136c0b718ca65db6df1c33fd1bb11
+# from geopolygon_utils import check_crossing, translate_polygons
+
+def split_polygon(poly: Polygon, output_format: str = "geojson") -> Union[
+    List[dict], List[Polygon], GeometryCollection
+    ]:
+    """
+    Given a GeoJSON representation of a Polygon, returns a collection of
+    'antimeridian-safe' constituent polygons split at the 180th meridian, 
+    ensuring compliance with GeoJSON standards (https://tools.ietf.org/html/rfc7946#section-3.1.9)
+    Assumptions:
+      - Any two consecutive points with over 180 degrees difference in
+        longitude are assumed to cross the antimeridian
+      - The polygon spans less than 360 degrees in longitude (i.e. does not wrap around the globe)
+      - However, the polygon may cross the antimeridian on multiple occasions
+    Parameters:
+        geojson (dict): GeoJSON of input polygon to be split. For example:
+                        {
+                        "type": "Polygon",
+                        "coordinates": [
+                          [
+                            [179.0, 0.0], [-179.0, 0.0], [-179.0, 1.0],
+                            [179.0, 1.0], [179.0, 0.0]
+                          ]
+                        ]
+                        }
+        output_format (str): Available options: "geojson", "polygons", "geometrycollection"
+                             If "geometrycollection" returns a Shapely GeometryCollection.
+                             Otherwise, returns a list of either GeoJSONs or Shapely Polygons
+      
+    Returns:
+        List[dict]/List[Polygon]/GeometryCollection: antimeridian-safe polygon(s)
+    """
+    orig_coords = [ list(map(lambda pt: [pt[0], pt[1]], poly.exterior.coords)), ]
+
+    output_format = output_format.replace("-", "").strip().lower()
+    coords_shift = copy.deepcopy( orig_coords )
+    shell_minx = shell_maxx = None
+    split_meridians = set()
+    splitter = None
+
+    for ring_index, ring in enumerate(coords_shift):
+        if len(ring) < 1: 
+            continue
+        else:
+            ring_minx = ring_maxx = ring[0][0]
+            crossings = 0
+
+        for coord_index, (lon, _) in enumerate(ring[1:], start=1):
+            lon_prev = ring[coord_index - 1][0]
+            if check_crossing(lon, lon_prev, validate=False):
+                direction = math.copysign(1, lon - lon_prev)
+                coords_shift[ring_index][coord_index][0] = lon - (direction * 360.0)
+                crossings += 1
+
+            x_shift = coords_shift[ring_index][coord_index][0]
+            if x_shift < ring_minx: ring_minx = x_shift
+            if x_shift > ring_maxx: ring_maxx = x_shift
+
+        # Ensure that any holes remain contained within the (translated) outer shell
+        if (ring_index == 0): # by GeoJSON definition, first ring is the outer shell
+            shell_minx, shell_maxx = (ring_minx, ring_maxx)
+        elif (ring_minx < shell_minx):
+            ring_shift = [[x + 360, y] for (x, y) in coords_shift[ring_index]]
+            coords_shift[ring_index] = ring_shift
+            ring_minx, ring_maxx = (x + 360 for x in (ring_minx, ring_maxx))
+        elif (ring_maxx > shell_maxx):
+            ring_shift = [[x - 360, y] for (x, y) in coords_shift[ring_index]]
+            coords_shift[ring_index] = ring_shift
+            ring_minx, ring_maxx = (x - 360 for x in (ring_minx, ring_maxx))
+
+        if crossings: # keep track of meridians to split on
+            if ring_minx < -180: split_meridians.add(-180)
+            if ring_maxx > 180: split_meridians.add(180)
+
+    n_splits = len(split_meridians)
+    if n_splits > 1:
+        raise NotImplementedError(
+            """Splitting a Polygon by multiple meridians (MultiLineString) 
+               not supported by Shapely"""
+        )
+    elif n_splits == 1:
+        split_lon = next(iter(split_meridians))
+        meridian = [[split_lon, -90.0], [split_lon, 90.0]]
+        splitter = LineString(meridian)
+
+    shell, *holes = coords_shift if splitter else orig_coords
+    if splitter: split_polygons = split(Polygon(shell, holes), splitter)
+    else: split_polygons = GeometryCollection([Polygon(shell, holes)])
+        
+    geo_polygons = list(translate_polygons(split_polygons, output_format))  
+    if output_format == "geometrycollection": return GeometryCollection(geo_polygons)
+    else: return geo_polygons
+
+#########
+
+_SPLITSTRING = LineString([ Point(0, 90), Point(0, -90) ])
+
 def geo(world, vd, opts):
     polygons = []
-    # Calculate polygons for each continent
+
+    # for cell_idx in [i for i in world.cell_idxs() if world.cp_celltype[i] == Cell.Type.LAND]:
+    #     outline_x = []
+    #     outline_y = []
+
+    #     for (latitude, longitude) in vd.get_region(cell_idx):
+    #         outline_x.append(longitude)
+    #         outline_y.append(latitude)
+        
+    #     geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
+    #     polygon = Polygon(geometry)
+
+    #     # Check to see if this polygon crosses the anti-meridian. If it does, we need to split it
+    #     # into two polygons (one for each side), otherwise Shapely and PostGIS will assume we want
+    #     # to connect the far west coords to the far right coords vs just crossing the antimeridian.
+    #     split_polys = split_polygon(polygon, 'polygons')
+
+    #     for poly in split_polys:
+    #         polygons.append(poly)
+
+    # Calculate polygons for each landform
     for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
         # Get all cells with the current landform_id
         cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
 
-        for polygon in vd.outline_polygons(cell_idxs):
-            outline_x = []
+        print('landform_size={}'.format( len(cell_idxs) ))
+
+        # outline_x = [] 
+        # outline_y = []
+
+        for cell_idx in cell_idxs:
+            outline_x = [] 
             outline_y = []
 
-            for segment in polygon:
-                outline_x.append(segment[0][0])
-                outline_y.append(segment[0][1])
-
-            outline_x.append(outline_x[0])
-            outline_y.append(outline_y[0])
-
-            # _, outline_x = inter(outline_x)
-            # _, outline_y = inter(outline_y)
-    
-            # Naive scale to lat/long
-            outline_x = [proj_x(x) for x in outline_x]
-            outline_y = [proj_y(y) for y in outline_y]
-
+            for (latitude, longitude) in vd.get_region(cell_idx):
+                outline_x.append(longitude)
+                outline_y.append(latitude)
+            
             geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
-            polygons.append(Polygon(geometry))
+            polygon = Polygon(geometry)
+
+            split_polys = split_polygon(polygon, 'polygons')
+            for poly in split_polys:
+                polygons.append(poly)
+
+        # break
+
+        # Each landform should be a single polygon. Iterate over the coordinates in order.
+        # for (x, y) in vd.outline_polygon(cell_idxs):
+        #     outline_x.append(x)
+        #     outline_y.append(y)
+
+        # geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
+        # polygon = Polygon(geometry)
+
+        # split_polys = split_polygon(polygon, 'polygons')
+        # for poly in split_polys:
+        #     polygons.append(poly)
+
+        # break
+
+        # polygons.append(Polygon(geometry))
+
+        # for polygon in vd.outline_polygons(cell_idxs):
+        #     outline_x = []
+        #     outline_y = []
+
+        #     print(polygon)
+
+        #     for segment in polygon:
+        #         outline_x.append(segment[0][0])
+        #         outline_y.append(segment[0][1])
+
+        #     outline_x.append(outline_x[0])
+        #     outline_y.append(outline_y[0])
+
+        #     # _, outline_x = inter(outline_x)
+        #     # _, outline_y = inter(outline_y)
+    
+        #     # Naive scale to lat/long
+        #     outline_x = [proj_x(x) for x in outline_x]
+        #     outline_y = [proj_y(y) for y in outline_y]
+
+        #     geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
+        #     polygons.append(Polygon(geometry))
 
     # Prep PostGIS for continents
     engine = create_engine('postgres://localhost:5432/glimpse')
@@ -617,9 +809,17 @@ def geo(world, vd, opts):
         # fully contained within another polygon.
         # TODO: can we use existing entities to identify lakes instead of re-deriving?
         is_continent = True
-        for target in [p for p in polygons if p != polygon]:
-            if target.contains(polygon):
-                is_continent = False # lake, not continent
+        # for target in [p for p in polygons if p != polygon]:
+        #     if target.contains(polygon):
+        #         is_continent = False # lake, not continent
+
+        
+        # if abs( polygon.bounds[0] - polygon.bounds[2] ) > 180.0:
+        #     gdf['name'] = 'Lake'
+        #     gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+        # else:
+        #     gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
+        #     gdf.to_postgis(name='continents', con=engine, if_exists='append')
 
         if is_continent:
             gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
@@ -628,23 +828,23 @@ def geo(world, vd, opts):
             gdf['name'] = 'Lake'
             gdf.to_postgis(name='lakes', con=engine, if_exists='append')
 
+    return
+
     # Prep PostGIS for cities
     engine.execute('drop table if exists cities')
 
-    for entity in world.entities():
-        # TODO: remove once we want to render mountain labels (once they're being rendered)
-        if isinstance(entity, City):
-            city_loc = Point(
-                proj_x( world.cp_longitude[entity.cell_idx] ), 
-                proj_y( world.cp_latitude[entity.cell_idx] ),
-            )
+    for entity in [e for e in world.entities() if isinstance(e, City)]:
+        city_loc = Point(
+            proj_x( world.cp_longitude[entity.cell_idx] ), 
+            proj_y( world.cp_latitude[entity.cell_idx] ),
+        )
 
-            series = geopandas.GeoSeries(city_loc, crs=GIS_CRS)
-            gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
-            gdf['name'] = entity.name
-            gdf['pop_size'] = entity.size()
+        series = geopandas.GeoSeries(city_loc, crs=GIS_CRS)
+        gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
+        gdf['name'] = entity.name
+        gdf['pop_size'] = entity.size()
 
-            gdf.to_postgis(name='cities', con=engine, if_exists='append')
+        gdf.to_postgis(name='cities', con=engine, if_exists='append')
 
     # Prep PostGIS for biomes
     engine.execute('drop table if exists biomes')
