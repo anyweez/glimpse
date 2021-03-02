@@ -53,17 +53,6 @@ noise_weights = [
 shift_weight = NoiseWeight(weight=0.6, scale=None, octaves=None)
 noise_base = random.randint(0, 1000)
 
-def calc_shift(x, y):
-	x_dist = min(x, 1.0 - x)
-	y_dist = min(y, 1.0 - y)
-
-	smaller = min(x_dist, y_dist)
-
-	if smaller < 0.15:
-		return (0.15 - smaller) / 0.15
-	
-	return 0.0
-
 def noise_xy(x, y):
     all_weights = sum( [nw.weight for nw in noise_weights] )
 
@@ -87,9 +76,8 @@ def generate(world, vd):
         latitude = world.cp_latitude[idx]
 
         base = noise_xy(longitude, latitude)
-        shift = calc_shift(longitude, latitude) * shift_weight.weight
 
-        elevation_list.append( max(0.01, min(0.99, base - shift)) )
+        elevation_list.append( max(0.01, min(0.99, base)) )
 
     elevation_arr = world.new_cp_array(numpy.double, elevation_list)
     world.add_cell_property('elevation', elevation_arr)
@@ -114,7 +102,6 @@ def generate(world, vd):
     
     depth_arr = world.new_cp_array(numpy.double, depth_list)
     world.add_cell_property('depth', depth_arr)
-
 
 # @genreq(cellprops=['latitude', 'longitude', 'plate'])
 # def generate(world, vd):

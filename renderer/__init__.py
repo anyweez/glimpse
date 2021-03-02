@@ -735,8 +735,6 @@ def geo(world, vd, opts):
         # Get all cells with the current landform_id
         cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
 
-        print('landform_size={}'.format( len(cell_idxs) ))
-
         # outline_x = [] 
         # outline_y = []
 
