@@ -11,26 +11,19 @@ def generate(world, vd):
     cell's `boundary` property to properly reflect whether they're a boundary cell.
     '''
 
-    # Store the voronoi region idx for the cell.
-    v_idxs = sorted(vd.vor.point_region)
-    voronoi_idx = world.new_cp_array(numpy.uint32, v_idxs)
-
-    world.add_cell_property('voronoi_idx', voronoi_idx)
-
     # Add latitude and longitude from the Voronoi diagram
     latitude_arr = numpy.full(world.get_cellcount(), -1, dtype=numpy.double)
     longitude_arr = numpy.full(world.get_cellcount(), -1, dtype=numpy.double)
 
-    for point_idx, v_idx in enumerate(vd.vor.point_region):
-        # Get the cell idx for the voronoi region idx
-        # TODO: check performance implications; this is O(N^2) and may be slow
-        cell_idx = v_idxs.index(v_idx)
+    for cell_idx in world.cell_idxs():
+        (latitude, longitude) = vd.centroid(cell_idx)
 
-        # Longitude = x axis, latitude = y axis
-        longitude_arr[cell_idx] = vd.vor.points[point_idx][0]
-        latitude_arr[cell_idx] = vd.vor.points[point_idx][1]
+        latitude_arr[cell_idx] = latitude
+        longitude_arr[cell_idx] = longitude
 
     world.add_cell_property('latitude', latitude_arr)
     world.add_cell_property('longitude', longitude_arr)
 
+    # A landform won't consider a high-elevation a "mountain" unless it exceeds this elevation.
+    # In particular, it won't be designated as a POI and won't be named.
     world.set_param('MountainMinHeight', 0.75)

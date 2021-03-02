@@ -46,6 +46,10 @@ def generate(world, vd):
         # Choose from all unassigned land cells.
         land_cells = numpy.argwhere((forest_arr == -1) & (world.cp_celltype == Cell.Type.LAND))[:, 0]
         
+        # All cultures currently require land to settle; if there are no land cells, skip.
+        if len(land_cells) == 0:
+            break
+
         samples = random.choices(land_cells, k=SampleSize)
         scores = [score(idx) for idx in samples]
 

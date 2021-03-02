@@ -93,6 +93,10 @@ def generate(world, vd):
 
     land_cells = numpy.argwhere(world.cp_celltype == Cell.Type.LAND)[:, 0]
 
+    # All cultures currently require land to settle; if there are no land cells, skip.
+    if len(land_cells) == 0:
+        return
+
     active_cultures = [True for _ in cultures]
 
     # Keep settling while there are high-scoring places to settle. Round robin between cultures.

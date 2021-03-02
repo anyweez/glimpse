@@ -4,12 +4,18 @@ import voronoi, graph, renderer, world
 import plugins
 
 # Configuration variables
-PointCount = 4000      # default = 3500
+PointCount = 2000      # default = 3500
 NumWorlds = 1
 
 def generate(world_idx):
     def point_cloud(n):
-        return numpy.random.rand(n, 2)
+        '''
+        Generate a series of `n` random latlong points, returned as a single ndarray
+        '''
+        return numpy.array( [(
+            numpy.random.uniform(-90.0, 90.0),          # latitude
+            numpy.random.uniform(-180.0, 180.0),        # longitude
+        ) for _ in range(n)] )
 
     def generate_world(world, vd):
         available_cellprops = []
@@ -85,8 +91,13 @@ def generate(world_idx):
 
     cell_idxs = [idx for idx in range(PointCount)]
     cell_mapping = {}
-    for cell_idx, v_idx in enumerate( sorted(vor.point_region) ):
-        cell_mapping[cell_idx] = v_idx
+    # for cell_idx, v_idx in enumerate( sorted(vor.point_region) ):
+        # cell_mapping[cell_idx] = v_idx
+    # NOTE: I believe the spherical voronoi surface removes the need for this mapping;
+    # the version below is clearly not very important and assuming no new bugs emerge
+    # it should be possible to remove the mapping entirely.
+    for cell_idx in cell_idxs:
+        cell_mapping[cell_idx] = cell_idx
 
     print('  [------] Building world graph...')
     worldgraph = graph.BuildGraph(cell_idxs, vor, cell_mapping)
