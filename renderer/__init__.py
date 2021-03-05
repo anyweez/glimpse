@@ -578,131 +578,131 @@ def proj_y(base_y):
 #     img.FlushCache()    # write image to disk
 
 # FROM https://towardsdatascience.com/around-the-world-in-80-lines-crossing-the-antimeridian-with-python-and-shapely-c87c9b6e1513
-import math
-import copy
-import json
-from typing import Union, List
-from shapely.geometry import Polygon, LineString, GeometryCollection
-from shapely.ops import split
+# import math
+# import copy
+# import json
+# from typing import Union, List
+# from shapely.geometry import Polygon, LineString, GeometryCollection
+# from shapely.ops import split
 
-from typing import Union, List
-from shapely.geometry import mapping, Polygon, GeometryCollection
-from shapely import affinity
+# from typing import Union, List
+# from shapely.geometry import mapping, Polygon, GeometryCollection
+# from shapely import affinity
 
-def check_crossing(lon1: float, lon2: float, validate: bool = True):
-    """
-    Assuming a minimum travel distance between two provided longitude coordinates,
-    checks if the 180th meridian (antimeridian) is crossed.
-    """
-    if validate and any(abs(x) > 180.0 for x in [lon1, lon2]):
-        raise ValueError("longitudes must be in degrees [-180.0, 180.0]")   
-    return abs(lon2 - lon1) > 180.0
+# def check_crossing(lon1: float, lon2: float, validate: bool = True):
+#     """
+#     Assuming a minimum travel distance between two provided longitude coordinates,
+#     checks if the 180th meridian (antimeridian) is crossed.
+#     """
+#     if validate and any(abs(x) > 180.0 for x in [lon1, lon2]):
+#         raise ValueError("longitudes must be in degrees [-180.0, 180.0]")   
+#     return abs(lon2 - lon1) > 180.0
 
-def translate_polygons(geometry_collection: GeometryCollection, 
-                       output_format: str = "geojson") -> Union[List[dict], List[Polygon]]:
+# def translate_polygons(geometry_collection: GeometryCollection, 
+#                        output_format: str = "geojson") -> Union[List[dict], List[Polygon]]:
     
-  for polygon in geometry_collection:
-      (minx, _, maxx, _) = polygon.bounds
-      if minx < -180: geo_polygon = affinity.translate(polygon, xoff = 360)
-      elif maxx > 180: geo_polygon = affinity.translate(polygon, xoff = -360)
-      else: geo_polygon = polygon
+#   for polygon in geometry_collection:
+#       (minx, _, maxx, _) = polygon.bounds
+#       if minx < -180: geo_polygon = affinity.translate(polygon, xoff = 360)
+#       elif maxx > 180: geo_polygon = affinity.translate(polygon, xoff = -360)
+#       else: geo_polygon = polygon
 
-      yield json.dumps(mapping(geo_polygon)) if (output_format == "geojson") else geo_polygon
+#       yield json.dumps(mapping(geo_polygon)) if (output_format == "geojson") else geo_polygon
 
 
-# https://gist.github.com/PawaritL/ec7136c0b718ca65db6df1c33fd1bb11
-# from geopolygon_utils import check_crossing, translate_polygons
+# # https://gist.github.com/PawaritL/ec7136c0b718ca65db6df1c33fd1bb11
+# # from geopolygon_utils import check_crossing, translate_polygons
 
-def split_polygon(poly: Polygon, output_format: str = "geojson") -> Union[
-    List[dict], List[Polygon], GeometryCollection
-    ]:
-    """
-    Given a GeoJSON representation of a Polygon, returns a collection of
-    'antimeridian-safe' constituent polygons split at the 180th meridian, 
-    ensuring compliance with GeoJSON standards (https://tools.ietf.org/html/rfc7946#section-3.1.9)
-    Assumptions:
-      - Any two consecutive points with over 180 degrees difference in
-        longitude are assumed to cross the antimeridian
-      - The polygon spans less than 360 degrees in longitude (i.e. does not wrap around the globe)
-      - However, the polygon may cross the antimeridian on multiple occasions
-    Parameters:
-        geojson (dict): GeoJSON of input polygon to be split. For example:
-                        {
-                        "type": "Polygon",
-                        "coordinates": [
-                          [
-                            [179.0, 0.0], [-179.0, 0.0], [-179.0, 1.0],
-                            [179.0, 1.0], [179.0, 0.0]
-                          ]
-                        ]
-                        }
-        output_format (str): Available options: "geojson", "polygons", "geometrycollection"
-                             If "geometrycollection" returns a Shapely GeometryCollection.
-                             Otherwise, returns a list of either GeoJSONs or Shapely Polygons
+# def split_polygon(poly: Polygon, output_format: str = "geojson") -> Union[
+#     List[dict], List[Polygon], GeometryCollection
+#     ]:
+#     """
+#     Given a GeoJSON representation of a Polygon, returns a collection of
+#     'antimeridian-safe' constituent polygons split at the 180th meridian, 
+#     ensuring compliance with GeoJSON standards (https://tools.ietf.org/html/rfc7946#section-3.1.9)
+#     Assumptions:
+#       - Any two consecutive points with over 180 degrees difference in
+#         longitude are assumed to cross the antimeridian
+#       - The polygon spans less than 360 degrees in longitude (i.e. does not wrap around the globe)
+#       - However, the polygon may cross the antimeridian on multiple occasions
+#     Parameters:
+#         geojson (dict): GeoJSON of input polygon to be split. For example:
+#                         {
+#                         "type": "Polygon",
+#                         "coordinates": [
+#                           [
+#                             [179.0, 0.0], [-179.0, 0.0], [-179.0, 1.0],
+#                             [179.0, 1.0], [179.0, 0.0]
+#                           ]
+#                         ]
+#                         }
+#         output_format (str): Available options: "geojson", "polygons", "geometrycollection"
+#                              If "geometrycollection" returns a Shapely GeometryCollection.
+#                              Otherwise, returns a list of either GeoJSONs or Shapely Polygons
       
-    Returns:
-        List[dict]/List[Polygon]/GeometryCollection: antimeridian-safe polygon(s)
-    """
-    orig_coords = [ list(map(lambda pt: [pt[0], pt[1]], poly.exterior.coords)), ]
+#     Returns:
+#         List[dict]/List[Polygon]/GeometryCollection: antimeridian-safe polygon(s)
+#     """
+#     orig_coords = [ list(map(lambda pt: [pt[0], pt[1]], poly.exterior.coords)), ]
 
-    output_format = output_format.replace("-", "").strip().lower()
-    coords_shift = copy.deepcopy( orig_coords )
-    shell_minx = shell_maxx = None
-    split_meridians = set()
-    splitter = None
+#     output_format = output_format.replace("-", "").strip().lower()
+#     coords_shift = copy.deepcopy( orig_coords )
+#     shell_minx = shell_maxx = None
+#     split_meridians = set()
+#     splitter = None
 
-    for ring_index, ring in enumerate(coords_shift):
-        if len(ring) < 1: 
-            continue
-        else:
-            ring_minx = ring_maxx = ring[0][0]
-            crossings = 0
+#     for ring_index, ring in enumerate(coords_shift):
+#         if len(ring) < 1: 
+#             continue
+#         else:
+#             ring_minx = ring_maxx = ring[0][0]
+#             crossings = 0
 
-        for coord_index, (lon, _) in enumerate(ring[1:], start=1):
-            lon_prev = ring[coord_index - 1][0]
-            if check_crossing(lon, lon_prev, validate=False):
-                direction = math.copysign(1, lon - lon_prev)
-                coords_shift[ring_index][coord_index][0] = lon - (direction * 360.0)
-                crossings += 1
+#         for coord_index, (lon, _) in enumerate(ring[1:], start=1):
+#             lon_prev = ring[coord_index - 1][0]
+#             if check_crossing(lon, lon_prev, validate=False):
+#                 direction = math.copysign(1, lon - lon_prev)
+#                 coords_shift[ring_index][coord_index][0] = lon - (direction * 360.0)
+#                 crossings += 1
 
-            x_shift = coords_shift[ring_index][coord_index][0]
-            if x_shift < ring_minx: ring_minx = x_shift
-            if x_shift > ring_maxx: ring_maxx = x_shift
+#             x_shift = coords_shift[ring_index][coord_index][0]
+#             if x_shift < ring_minx: ring_minx = x_shift
+#             if x_shift > ring_maxx: ring_maxx = x_shift
 
-        # Ensure that any holes remain contained within the (translated) outer shell
-        if (ring_index == 0): # by GeoJSON definition, first ring is the outer shell
-            shell_minx, shell_maxx = (ring_minx, ring_maxx)
-        elif (ring_minx < shell_minx):
-            ring_shift = [[x + 360, y] for (x, y) in coords_shift[ring_index]]
-            coords_shift[ring_index] = ring_shift
-            ring_minx, ring_maxx = (x + 360 for x in (ring_minx, ring_maxx))
-        elif (ring_maxx > shell_maxx):
-            ring_shift = [[x - 360, y] for (x, y) in coords_shift[ring_index]]
-            coords_shift[ring_index] = ring_shift
-            ring_minx, ring_maxx = (x - 360 for x in (ring_minx, ring_maxx))
+#         # Ensure that any holes remain contained within the (translated) outer shell
+#         if (ring_index == 0): # by GeoJSON definition, first ring is the outer shell
+#             shell_minx, shell_maxx = (ring_minx, ring_maxx)
+#         elif (ring_minx < shell_minx):
+#             ring_shift = [[x + 360, y] for (x, y) in coords_shift[ring_index]]
+#             coords_shift[ring_index] = ring_shift
+#             ring_minx, ring_maxx = (x + 360 for x in (ring_minx, ring_maxx))
+#         elif (ring_maxx > shell_maxx):
+#             ring_shift = [[x - 360, y] for (x, y) in coords_shift[ring_index]]
+#             coords_shift[ring_index] = ring_shift
+#             ring_minx, ring_maxx = (x - 360 for x in (ring_minx, ring_maxx))
 
-        if crossings: # keep track of meridians to split on
-            if ring_minx < -180: split_meridians.add(-180)
-            if ring_maxx > 180: split_meridians.add(180)
+#         if crossings: # keep track of meridians to split on
+#             if ring_minx < -180: split_meridians.add(-180)
+#             if ring_maxx > 180: split_meridians.add(180)
 
-    n_splits = len(split_meridians)
-    if n_splits > 1:
-        raise NotImplementedError(
-            """Splitting a Polygon by multiple meridians (MultiLineString) 
-               not supported by Shapely"""
-        )
-    elif n_splits == 1:
-        split_lon = next(iter(split_meridians))
-        meridian = [[split_lon, -90.0], [split_lon, 90.0]]
-        splitter = LineString(meridian)
+#     n_splits = len(split_meridians)
+#     if n_splits > 1:
+#         raise NotImplementedError(
+#             """Splitting a Polygon by multiple meridians (MultiLineString) 
+#                not supported by Shapely"""
+#         )
+#     elif n_splits == 1:
+#         split_lon = next(iter(split_meridians))
+#         meridian = [[split_lon, -90.0], [split_lon, 90.0]]
+#         splitter = LineString(meridian)
 
-    shell, *holes = coords_shift if splitter else orig_coords
-    if splitter: split_polygons = split(Polygon(shell, holes), splitter)
-    else: split_polygons = GeometryCollection([Polygon(shell, holes)])
+#     shell, *holes = coords_shift if splitter else orig_coords
+#     if splitter: split_polygons = split(Polygon(shell, holes), splitter)
+#     else: split_polygons = GeometryCollection([Polygon(shell, holes)])
         
-    geo_polygons = list(translate_polygons(split_polygons, output_format))  
-    if output_format == "geometrycollection": return GeometryCollection(geo_polygons)
-    else: return geo_polygons
+#     geo_polygons = list(translate_polygons(split_polygons, output_format))  
+#     if output_format == "geometrycollection": return GeometryCollection(geo_polygons)
+#     else: return geo_polygons
 
 #########
 
@@ -731,11 +731,8 @@ def geo(world, vd, opts):
             # Check to see if this polygon crosses the anti-meridian. If it does, we need to split it
             # into two polygons (one for each side), otherwise Shapely and PostGIS will assume we want
             # to connect the far west coords to the far right coords vs just crossing the antimeridian.
-            split_polys = split_polygon(polygon, 'polygons')
-
-            for poly in split_polys:
-                polygons.append(poly)
-                landform_ids.append(landform_id)
+            polygons.append(polygon)
+            landform_ids.append(landform_id)
 
     # Prep PostGIS for continents
     engine = create_engine('postgres://localhost:5432/glimpse')
@@ -753,14 +750,6 @@ def geo(world, vd, opts):
         for target in [p for p in polygons if p != polygon]:
             if target.contains(polygon):
                 is_continent = False # lake, not continent
-
-        
-        # if abs( polygon.bounds[0] - polygon.bounds[2] ) > 180.0:
-        #     gdf['name'] = 'Lake'
-        #     gdf.to_postgis(name='lakes', con=engine, if_exists='append')
-        # else:
-        #     gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
-        #     gdf.to_postgis(name='continents', con=engine, if_exists='append')
 
         if is_continent:
             gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
