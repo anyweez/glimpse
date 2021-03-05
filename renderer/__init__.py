@@ -706,100 +706,43 @@ def split_polygon(poly: Polygon, output_format: str = "geojson") -> Union[
 
 #########
 
-_SPLITSTRING = LineString([ Point(0, 90), Point(0, -90) ])
-
 def geo(world, vd, opts):
     polygons = []
-
-    # for cell_idx in [i for i in world.cell_idxs() if world.cp_celltype[i] == Cell.Type.LAND]:
-    #     outline_x = []
-    #     outline_y = []
-
-    #     for (latitude, longitude) in vd.get_region(cell_idx):
-    #         outline_x.append(longitude)
-    #         outline_y.append(latitude)
-        
-    #     geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
-    #     polygon = Polygon(geometry)
-
-    #     # Check to see if this polygon crosses the anti-meridian. If it does, we need to split it
-    #     # into two polygons (one for each side), otherwise Shapely and PostGIS will assume we want
-    #     # to connect the far west coords to the far right coords vs just crossing the antimeridian.
-    #     split_polys = split_polygon(polygon, 'polygons')
-
-    #     for poly in split_polys:
-    #         polygons.append(poly)
+    landform_ids = []
 
     # Calculate polygons for each landform
     for landform_id in [id for id in numpy.unique(world.cp_landform_id) if id != -1]:
         # Get all cells with the current landform_id
         cell_idxs = numpy.argwhere(world.cp_landform_id == landform_id)[:, 0]
 
-        # outline_x = [] 
-        # outline_y = []
-
-        for cell_idx in cell_idxs:
+        # Each landform should be a single polygon UNLESS it needs to be split across 
+        # the antimeridian / poles. Iterate over the coordinates in order.
+        for point_list in vd.outline_polygons(cell_idxs):
             outline_x = [] 
             outline_y = []
 
-            for (latitude, longitude) in vd.get_region(cell_idx):
-                outline_x.append(longitude)
-                outline_y.append(latitude)
-            
+            for (y, x) in point_list:
+                outline_x.append(x)
+                outline_y.append(y)
+
             geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
             polygon = Polygon(geometry)
 
+            # Check to see if this polygon crosses the anti-meridian. If it does, we need to split it
+            # into two polygons (one for each side), otherwise Shapely and PostGIS will assume we want
+            # to connect the far west coords to the far right coords vs just crossing the antimeridian.
             split_polys = split_polygon(polygon, 'polygons')
+
             for poly in split_polys:
                 polygons.append(poly)
-
-        # break
-
-        # Each landform should be a single polygon. Iterate over the coordinates in order.
-        # for (x, y) in vd.outline_polygon(cell_idxs):
-        #     outline_x.append(x)
-        #     outline_y.append(y)
-
-        # geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
-        # polygon = Polygon(geometry)
-
-        # split_polys = split_polygon(polygon, 'polygons')
-        # for poly in split_polys:
-        #     polygons.append(poly)
-
-        # break
-
-        # polygons.append(Polygon(geometry))
-
-        # for polygon in vd.outline_polygons(cell_idxs):
-        #     outline_x = []
-        #     outline_y = []
-
-        #     print(polygon)
-
-        #     for segment in polygon:
-        #         outline_x.append(segment[0][0])
-        #         outline_y.append(segment[0][1])
-
-        #     outline_x.append(outline_x[0])
-        #     outline_y.append(outline_y[0])
-
-        #     # _, outline_x = inter(outline_x)
-        #     # _, outline_y = inter(outline_y)
-    
-        #     # Naive scale to lat/long
-        #     outline_x = [proj_x(x) for x in outline_x]
-        #     outline_y = [proj_y(y) for y in outline_y]
-
-        #     geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
-        #     polygons.append(Polygon(geometry))
+                landform_ids.append(landform_id)
 
     # Prep PostGIS for continents
     engine = create_engine('postgres://localhost:5432/glimpse')
     engine.execute('drop table if exists continents')
     engine.execute('drop table if exists lakes')
 
-    for polygon in polygons:
+    for idx, polygon in enumerate(polygons):
         series = geopandas.GeoSeries(polygon, crs=GIS_CRS)
         gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
 
@@ -807,9 +750,9 @@ def geo(world, vd, opts):
         # fully contained within another polygon.
         # TODO: can we use existing entities to identify lakes instead of re-deriving?
         is_continent = True
-        # for target in [p for p in polygons if p != polygon]:
-        #     if target.contains(polygon):
-        #         is_continent = False # lake, not continent
+        for target in [p for p in polygons if p != polygon]:
+            if target.contains(polygon):
+                is_continent = False # lake, not continent
 
         
         # if abs( polygon.bounds[0] - polygon.bounds[2] ) > 180.0:
@@ -821,6 +764,7 @@ def geo(world, vd, opts):
 
         if is_continent:
             gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
+            gdf['landform_id'] = landform_ids[idx]
             gdf.to_postgis(name='continents', con=engine, if_exists='append')
         else:
             gdf['name'] = 'Lake'

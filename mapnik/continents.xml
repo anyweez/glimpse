@@ -12,6 +12,14 @@
         placement="interior" allow-overlap="false">
         [name]
       </TextSymbolizer> -->
+
+      <TextSymbolizer
+        face-name="DejaVu Sans Book" size="10" fill="black" 
+        halo-fill="white" halo-radius="1"
+        placement="interior" allow-overlap="false">
+        [landform_id]
+      </TextSymbolizer>
+
     </Rule>
   </Style>
 

@@ -91,8 +91,7 @@ def generate(world_idx):
 
     cell_idxs = [idx for idx in range(PointCount)]
     cell_mapping = {}
-    # for cell_idx, v_idx in enumerate( sorted(vor.point_region) ):
-        # cell_mapping[cell_idx] = v_idx
+
     # NOTE: I believe the spherical voronoi surface removes the need for this mapping;
     # the version below is clearly not very important and assuming no new bugs emerge
     # it should be possible to remove the mapping entirely.

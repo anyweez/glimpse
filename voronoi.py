@@ -165,197 +165,110 @@ class VoronoiDiagram(object):
 
     #     return list( unary_union(polygons).exterior.coords )
 
-    def outline_polygon(self, cell_idxs):
-        print('cells={}'.format(len(cell_idxs)))
-        # Sort vertices; this function breaks if the region isn't sorted because it assumes points
-        # are ordered
-        self.vor.sort_vertices_of_regions()
-
-        # Get the list of all regions (vertex_ids of each) for the specified cell_idxs.
-        regions = list( map(lambda idx: self.vor.regions[self.mapping[idx]], cell_idxs) )
-
-        # Get the list of all ridges so that we can find ridges only included in a single cell
-        ridges = []
-
-        ridgemap = {}
-
-        for region in regions:
-            for idx in range( len(region) - 1 ):
-                if region[idx] < region[idx + 1]:
-                    ridges.append( (region[idx], region[idx + 1]) )
-                else:
-                    ridges.append( (region[idx + 1], region[idx]) )
-
-            if region[len(region) - 1] < region[0]:
-                ridges.append( (region[len(region) - 1], region[0]) )
-            else:
-                ridges.append( (region[0], region[len(region) - 1]) )
-            
-            print('region')
-            print(region)
-
-        # Identify ridges that only appear in one region; these are the ridges that make up the
-        # outline
-        outer_ridges = []
-        for ridge in ridges:
-            num_appearances = len( list(filter(lambda r: r == ridge, ridges)) )
-
-            if num_appearances == 1:
-                outer_ridges.append(ridge)
-
-        # Sort ridges so they're in a known order
-        outer_ridges = sorted(outer_ridges, key=lambda r: r[0])
-
-        print(outer_ridges)
-
-        # Iterate over ridges in order and yield points as we discover them. At the
-        # end loop back to the starting point to close the polygon
-        start_vertex = outer_ridges[0][0]                       # first vertex of the first ridge
-        yield to_latlong(self.vor.vertices[start_vertex])       # first point
-
-        next_ridge = outer_ridges[0]
-        while len(outer_ridges) > 0:
-            found_ridges = [ridge for ridge in outer_ridges if ridge[0] == next_ridge[1]]
-
-            if len(found_ridges) > 0:
-                next_ridge = found_ridges[0]
-                outer_ridges.remove(next_ridge)                     # remove this ridge from the list of outer ridges
-            else:
-                found_ridges = [ridge for ridge in outer_ridges if ridge[1] == next_ridge[1]]
-                outer_ridges.remove(found_ridges[0])                # remove this ridge from the list of outer ridges
-                next_ridge = ( found_ridges[0][1], found_ridges[0][0] )
-
-            # print('next ridge: {}'.format(next_ridge))
-
-            # next_ridge = [ridge for ridge in outer_ridges if ridge[0] == next_ridge[1] or ridge[1] == next_ridge[1]][0]
-
-            yield to_latlong( self.vor.vertices[next_ridge[1]] )
-
-            print('  {} -> to index {}'.format(next_ridge[0], next_ridge[1]))
-
-        # yield to_latlong( self.vor.vertices[next_ridge[1]] )    # yield the end point of the last ridge
-        # yield to_latlong( self.vor.vertices[start_vertex] )     # loop back to the first point
-
-
-
     def outline_polygons(self, cell_idxs):
-        ridges = []
-
         '''
-        get all allowed regions
-        for all ridge vertices
-            check if ridge is in exactly one region
+        Calculate the smallest number of polygons that contain the area of all of the cells
+        defined by `cell_idxs`. This function yields one or more lists of coordinate pairs
+        that represents the sorted order of the points in each polygon.
         '''
-        supported_regions = list( map(lambda idx: self.vor.regions[self.mapping[idx]], cell_idxs) )
-
-        # Calculate all ridges. *This assumes all vertices are in sorted order (clockwise or counterclockwise)*
         self.vor.sort_vertices_of_regions()
 
-        ridges = {}
+        # Create all edges
+        outer_edges = set()
+        inner_edges = set()
+
         for cell_idx in cell_idxs:
-            region = self.vor.regions[cell_idx]
+            vertices = self.get_region(cell_idx, locations=False)
 
-            ridges[cell_idx] = []
-            for idx in range( len(region) - 2 ):
-                ridges[cell_idx].append( (region[idx], region[idx + 1]) )
+            for idx in range( -1, len(vertices) - 1 ):
+                edge = ( 
+                    min(vertices[idx], vertices[idx + 1]),
+                    max(vertices[idx], vertices[idx + 1]),
+                )
 
-        # Calculate which of the `supported_regions` contain the specified ridge
-        regions_with_ridge = lambda ridge: list( filter(lambda region: ridge[0] in region and ridge[1] in region, supported_regions) )
+                # If this edge is already identified as an inner edge, nothing new to record.
+                if edge in inner_edges:
+                    pass
+                # If not but if was previous considered an outer edge, its now an inner edge
+                elif edge in outer_edges:
+                    outer_edges.remove(edge)
+                    inner_edges.add(edge)
+                # If its neither of the above, we haven't seen it before. Its an outer edge 
+                # until proven otherwise.
+                else:
+                    outer_edges.add(edge)
 
-        single_ridges = []
-        for cell_idx, ridge_list in ridges.items():
-            for ridge in ridge_list:
-                if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
-                    single_ridges.append(ridge)
+        outer_edges = list(outer_edges)
 
-        # Build list of all ridge vertices
-        # for ridge in self.vor.ridge_vertices:
-        #     if len(regions_with_ridge(ridge)) == 1 and -1 not in ridge:
-        #         ridges.append(ridge)
+        # Iterate through all outer edges and trace the outer edge until a circuit is completed.
+        # Once we've completed a circuit, yield the point list and search for another circuit. 
+        # Terminate once all outside edges have been assigned to a polygon.
+        while len(outer_edges) > 0:
+            (start, next_vertex) = outer_edges.pop()
+            ordered_vertices = [start, next_vertex]
 
-        polygons = self.sort_ridges(single_ridges)
+            while start != next_vertex:
+                (src, dest) = [edge for edge in outer_edges if edge[0] == next_vertex or edge[1] == next_vertex][0]
 
-        for polygon in polygons:
-            points_start = list( map(lambda ridge: to_latlong(self.vor.vertices[ridge[0]]), polygon))
-            points_end = list( map(lambda ridge: to_latlong(self.vor.vertices[ridge[1]]), polygon))
+                outer_edges.remove( (src, dest) )
 
-            yield points_start[0]
+                # Add in the missing value as the next vertex (could be src or dest -- effectively random
+                # so we need to check).
+                if next_vertex == src:
+                    ordered_vertices.append(dest)
+                else:
+                    ordered_vertices.append(src)
 
-            for point in points_end:
-                print(point)
-                yield point
-
-            # Connect back to the start
-            yield points_start[0]
+                next_vertex = ordered_vertices[-1]
             
+            yield list( map(lambda v: self.vertex_location(v), ordered_vertices) )
 
-    def sort_ridges(self, ridges):
-        polygons = []
+    # def sort_ridges(self, ridges):
+    #     polygons = []
 
-        polygon = [ ridges[0], ]
-        ridges.pop(0)
+    #     polygon = [ ridges[0], ]
+    #     ridges.pop(0)
 
-        next_id = polygon[0][1]
+    #     next_id = polygon[0][1]
 
-        # Store the starting vertex of the polygon. Once we get back, we need to pick a new
-        # polygon_start_id from the remaining vertices. This will cover landforms with multiple
-        # polygons, such as continents with both a coast and lakes.
-        polygon_start_id = next_id
+    #     # Store the starting vertex of the polygon. Once we get back, we need to pick a new
+    #     # polygon_start_id from the remaining vertices. This will cover landforms with multiple
+    #     # polygons, such as continents with both a coast and lakes.
+    #     polygon_start_id = next_id
 
-        remaining = len(ridges)
-        while len(ridges) > 0:
-            for idx, ridge in enumerate(ridges):
-                if ridge[0] == next_id:
-                    polygon.append(ridge)
+    #     remaining = len(ridges)
+    #     while len(ridges) > 0:
+    #         for idx, ridge in enumerate(ridges):
+    #             if ridge[0] == next_id:
+    #                 polygon.append(ridge)
 
-                    ridges.pop(idx)
-                    next_id = ridge[1]
+    #                 ridges.pop(idx)
+    #                 next_id = ridge[1]
 
-                    break
+    #                 break
 
-                if ridge[1] == next_id:
-                    polygon.append(ridge)
+    #             if ridge[1] == next_id:
+    #                 polygon.append(ridge)
 
-                    ridges.pop(idx)
-                    next_id = ridge[0]
+    #                 ridges.pop(idx)
+    #                 next_id = ridge[0]
 
-                    break
+    #                 break
 
-            # Didn't remove a ridge. Switch to new polygon.
-            if len(ridges) == remaining:
-                polygons.append(polygon)
-                polygon = [ ridges[0], ]
+    #         # Didn't remove a ridge. Switch to new polygon.
+    #         if len(ridges) == remaining:
+    #             polygons.append(polygon)
+    #             polygon = [ ridges[0], ]
 
-                ridges.pop(0)
-                next_id = polygon[-1][1]
+    #             ridges.pop(0)
+    #             next_id = polygon[-1][1]
             
-            remaining = len(ridges)
+    #         remaining = len(ridges)
         
-        if len(polygon) > 0:
-            polygons.append(polygon)
+    #     if len(polygon) > 0:
+    #         polygons.append(polygon)
 
-        return polygons
-
-# def _to_spherical(lat, long, alt=1.0):
-#     # from https://gis.stackexchange.com/questions/4147/lat-lon-alt-to-spherical-or-cartesian-coordinates
-#     x = math.cos(lat) * math.cos(long) * alt
-#     y = math.cos(lat) * math.sin(long) * alt
-#     z = math.sin(lat) * alt # z is 'up'
-
-#     return (x, y, z)
-
-# def _to_latlong(x, y, z):
-#     alt = math.sqrt( (x * x) + (y * y) + (z * z) )
-
-# def avg_w_singularity(points_latlong):
-#     diff = numpy.max(points_latlong[1]) - numpy.min(points_latlong[1])
-#     print(diff)
-
-#     if diff < 180.0:
-#         return numpy.mean(points_latlong, 0)
-#     else:
-#         for point in points_latlong:
-#             if point[0]
+    #     return polygons
 
 '''
 TODO: the spherical projection causes points to be pulled away from the anti-meridian (180 long)

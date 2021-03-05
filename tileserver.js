@@ -8,10 +8,10 @@ const strata = tilestrata();
 
 const layers = [
     { name: 'continents', mapnik_path: './mapnik/continents.xml' },
-    { name: 'cities', mapnik_path: './mapnik/cities.xml' },
+    // { name: 'cities', mapnik_path: './mapnik/cities.xml' },
     { name: 'lakes', mapnik_path: './mapnik/lakes.xml' },
     // { name: 'hillshading', mapnik_path: './mapnik/hillshading.xml' },
-    { name: 'biomes', mapnik_path: './mapnik/biomes.xml' },
+    // { name: 'biomes', mapnik_path: './mapnik/biomes.xml' },
 ]
 
 layers.forEach(layer => {

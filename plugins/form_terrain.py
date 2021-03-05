@@ -33,22 +33,35 @@ def noise_xyz(x, y):
 
     return total
 
+def on_antimeridian(region):
+    '''
+    Check whether a region is on the anti-meridian; the heuristic for determining 
+    this assumes that "normal" regions aren't wider than a single hemisphere.
+    '''
+    min_long = min([ pt[1] for pt in region ])
+    max_long = max([ pt[1] for pt in region ])
+
+    return max_long - min_long > 180.0
+
 @genreq(cellprops=['latitude', 'longitude', 'plate'])
 def generate(world, vd):
     elevation_list = []
 
+    WaterlineHeight = randfloat(0.45, 0.6)
+
     # Calculate height based on lat/long. This is currently wrapping around the
     # antimeridian but is not wrapping around the poles.
     for idx in world.cell_idxs():
-        latitude, longitude = vd.centroid(idx)
-        base = noise_xyz((latitude + 90) / 180, (longitude + 180) / 360)
+        if on_antimeridian( vd.get_region(idx) ):
+            elevation_list.append(WaterlineHeight - randfloat(0.05, 0.25))
+        else:
+            latitude, longitude = vd.centroid(idx)
+            base = noise_xyz((latitude + 90) / 180, (longitude + 180) / 360)
 
-        elevation_list.append( max(0.01, min(0.99, base)) )
+            elevation_list.append( max(0.01, min(0.99, base)) )
 
     elevation_arr = world.new_cp_array(numpy.double, elevation_list)
     world.add_cell_property('elevation', elevation_arr)
-
-    WaterlineHeight = randfloat(0.45, 0.75)
 
     def celltype(elevation):
         return Cell.Type.LAND if elevation > WaterlineHeight else Cell.Type.WATER

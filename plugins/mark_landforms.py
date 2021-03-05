@@ -8,7 +8,7 @@ def generate(world, vd):
     Unassigned = -1
     next_landform_id = 0
 
-    # All cells start off with a plate_id of -1 (unassigned)
+    # All cells start off with a landform_id of -1 (unassigned)
     landform_id_arr = world.new_cp_array(numpy.int16, Unassigned)
 
     # Create a subgraph containing edges for land cells only
