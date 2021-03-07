@@ -37,9 +37,9 @@ def generate(world, vd):
         corresponds to exactly one biome type.
         '''
         for biome_id, biome in enumerate(biomes):
-            if world.cp_temperature[idx] >= biome.t[0] and world.cp_temperature[idx] <= biome.t[1]:
-                if world.cp_moisture[idx] >= biome.m[0] and world.cp_moisture[idx] <= biome.m[1]:
-                    return biome_id
+            if biome.t[0] <= world.cp_temperature[idx] <= biome.t[1] and \
+                biome.m[0] <= world.cp_moisture[idx] <= biome.m[1]:
+                return biome_id
 
         raise Exception('Not a member of any biome @ t=%f, m=%f; must be an internal error with biome configurations.' % (world.cp_temperature[idx], world.cp_moisture[idx]))
 

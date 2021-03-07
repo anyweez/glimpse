@@ -1,9 +1,11 @@
 from renderer.hill import draw_hill
 from renderer.mountain import draw_mountain
 from shapely.geometry import Point, Polygon, LineString
-from shapely import affinity, ops
+# from shapely import affinity, ops
 from sqlalchemy import create_engine
-from osgeo import gdal, osr
+# from osgeo import gdal, osr
+
+import matplotlib.pyplot as plt
 
 # import matplotlib.pyplot as plt
 
@@ -794,6 +796,22 @@ def geo(world, vd, opts):
 
             gdf.to_postgis(name='biomes', con=engine, if_exists='append')
 
+    # Create moisture & temperature maps for the newly generated world.
+    moisture_img = numpy.zeros((180, 360),)
+    temperature_img = numpy.zeros((180, 360),)
+
+    for y_idx, y in enumerate( range(-90, 90) ):
+        for x_idx, x in enumerate( range(-180, 180) ):
+            cell_idx = vd.find_cell(y * 1.0, x * 1.0)
+
+            moisture_img[y_idx][x_idx] = world.cp_moisture[cell_idx]
+            temperature_img[y_idx][x_idx] = world.cp_temperature[cell_idx]
+    
+    plt.imshow(moisture_img, cmap='hot', interpolation='nearest')
+    plt.savefig('moisture.png')
+
+    plt.imshow(temperature_img, cmap='hot', interpolation='nearest')
+    plt.savefig('temperature.png')
 
     # elevation_map(world, vd)
     # print('Wrote elevation map to world.tiff')

@@ -38,7 +38,12 @@ def noise_xy(x, y):
 def generate(world, vd):
 
     def calculate_cell_moisture(idx):
-        base = noise_xy(world.cp_longitude[idx], world.cp_latitude[idx])
+        latitude, longitude = vd.centroid(idx)
+
+        base = noise_xy(
+            (latitude + 90) / 180, 
+            (longitude + 180) / 360,
+        )
 
         (_, dist_water) = world.graph.distance(idx, lambda dest_idx: world.cp_celltype[dest_idx] == Cell.Type.WATER)
 
