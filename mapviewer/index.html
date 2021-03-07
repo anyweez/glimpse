@@ -21,7 +21,7 @@
                 const map = L.map('mapid'); //.setView([51.505, -0.09], 0);
                 map.setView([0, 0], 2);
 
-                const layers = ['continents', 'biomes', 'lakes', 'cities'];
+                const layers = ['continents', /* 'biomes', */ 'lakes', 'cities'];
 
                 layers.forEach(layer => {
                     L.tileLayer(`http://localhost:8081/${layer}/{z}/{x}/{y}/tile.png`, {

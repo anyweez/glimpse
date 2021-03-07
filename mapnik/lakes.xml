@@ -4,7 +4,7 @@
     <Rule>
       <PolygonSymbolizer fill="#9fc5e8" 
         smooth="0.4" />
-      <LineSymbolizer stroke="black" stroke-width="1.0" 
+      <LineSymbolizer stroke="black" stroke-width="0.6" 
         smooth="0.4" />
       <!-- <TextSymbolizer
         face-name="DejaVu Sans Book" size="10" fill="black" 

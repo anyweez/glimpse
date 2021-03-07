@@ -4,7 +4,7 @@
     <Rule>
       <PolygonSymbolizer fill="#f2eff9" 
         smooth="0.4" />
-      <LineSymbolizer stroke="black" stroke-width="1.0" 
+      <LineSymbolizer stroke="black" stroke-width="0.6" 
         smooth="0.4" />
       <!-- <TextSymbolizer
         face-name="DejaVu Sans Book" size="10" fill="black" 
@@ -13,12 +13,12 @@
         [name]
       </TextSymbolizer> -->
 
-      <TextSymbolizer
+      <!-- <TextSymbolizer
         face-name="DejaVu Sans Book" size="10" fill="black" 
         halo-fill="white" halo-radius="1"
         placement="interior" allow-overlap="false">
         [landform_id]
-      </TextSymbolizer>
+      </TextSymbolizer> -->
 
     </Rule>
   </Style>

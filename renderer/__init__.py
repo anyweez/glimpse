@@ -541,11 +541,11 @@ def print_render(world, vd, opts):
 
 GIS_CRS = 'EPSG:4326'
 
-def proj_x(base_x):
-    return (base_x * 360.0) - 180
+# def proj_x(base_x):
+#     return (base_x * 360.0) - 180
 
-def proj_y(base_y):
-    return (base_y * 180.0) - 90.0
+# def proj_y(base_y):
+#     return (base_y * 180.0) - 90.0
 
 # def elevation_map(world, vd):
 #     '''
@@ -759,15 +759,15 @@ def geo(world, vd, opts):
             gdf['name'] = 'Lake'
             gdf.to_postgis(name='lakes', con=engine, if_exists='append')
 
-    return
-
     # Prep PostGIS for cities
     engine.execute('drop table if exists cities')
 
     for entity in [e for e in world.entities() if isinstance(e, City)]:
         city_loc = Point(
-            proj_x( world.cp_longitude[entity.cell_idx] ), 
-            proj_y( world.cp_latitude[entity.cell_idx] ),
+            # proj_x( world.cp_longitude[entity.cell_idx] ), 
+            # proj_y( world.cp_latitude[entity.cell_idx] ),
+            world.cp_longitude[entity.cell_idx],
+            world.cp_latitude[entity.cell_idx],
         )
 
         series = geopandas.GeoSeries(city_loc, crs=GIS_CRS)
@@ -776,6 +776,8 @@ def geo(world, vd, opts):
         gdf['pop_size'] = entity.size()
 
         gdf.to_postgis(name='cities', con=engine, if_exists='append')
+
+    return
 
     # Prep PostGIS for biomes
     engine.execute('drop table if exists biomes')
