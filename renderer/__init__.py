@@ -777,13 +777,11 @@ def geo(world, vd, opts):
 
         gdf.to_postgis(name='cities', con=engine, if_exists='append')
 
-    return
-
     # Prep PostGIS for biomes
     engine.execute('drop table if exists biomes')
 
     for cell_idx in [idx for idx in world.cell_idxs() if world.cp_celltype[idx] == Cell.Type.LAND]:
-        region = [ (proj_x(x), proj_y(y)) for (x, y) in vd.get_region(cell_idx) ]
+        region = [(y, x) for (x, y) in vd.get_region(cell_idx)]
 
         # vd.get_region() returns an empty list if the cell is out of bounds
         if len(region) > 0:
