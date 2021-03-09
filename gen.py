@@ -4,7 +4,7 @@ import voronoi, graph, renderer, world
 import plugins
 
 # Configuration variables
-PointCount = 2000      # default = 3500
+PointCount = 8000      # default = 3500
 NumWorlds = 1
 
 def generate(world_idx):

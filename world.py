@@ -85,10 +85,18 @@ class World(AbstractCellGroup):
         return num * ratio
 
     def add_entity(self, entity):
-        if isinstance(entity, Entity):
-            self.__entities.append(entity)
-        else:
-            raise Exception( 'Trying to add non-Entity: %s' % (type(entity),) )
+        # if isinstance(entity, Entity):
+        self.__entities.append(entity)
+        # else:
+        #     raise Exception( 'Trying to add non-Entity: %s' % (type(entity),) )
 
     def entities(self):
         return self.__entities
+
+    def cell_pct(self, cell_count):
+        '''
+        Return the percentage of cells in the world that `cell_count` corresponds
+        to. For example, if `cell_count` = 10 in a world containing 200 cells
+        then a value of (10 / 200) = 0.05 will be returned.
+        '''
+        return cell_count / len( self.cell_idxs() )

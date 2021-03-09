@@ -6,12 +6,12 @@
         smooth="0.4" />
       <LineSymbolizer stroke="black" stroke-width="0.6" 
         smooth="0.4" />
-      <!-- <TextSymbolizer
-        face-name="DejaVu Sans Book" size="10" fill="black" 
-        halo-fill="white" halo-radius="1"
+      <TextSymbolizer
+        face-name="DejaVu Serif Italic" size="10" fill="#00538F" 
+        halo-fill="#E5DADA" halo-radius="1"
         placement="interior" allow-overlap="false">
         [name]
-      </TextSymbolizer> -->
+      </TextSymbolizer>
     </Rule>
   </Style>
 

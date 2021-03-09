@@ -114,6 +114,14 @@ class Graph(object):
 
         return [ v.index for v in self.ig.bfsiter(int(region_idx)) ]
 
+    def contains_cell(self, cell_idx):
+        try:
+            _ = self.ig.vs.find(name=cell_idx)
+
+            return True
+        except:
+            return False
+
 def BuildGraph(cell_idxs, vor, mapping):
     '''
     Build a graph connecting cells that share vertices.

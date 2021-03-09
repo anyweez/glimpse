@@ -739,7 +739,6 @@ def geo(world, vd, opts):
     # Prep PostGIS for continents
     engine = create_engine('postgres://localhost:5432/glimpse')
     engine.execute('drop table if exists continents')
-    engine.execute('drop table if exists lakes')
 
     for idx, polygon in enumerate(polygons):
         series = geopandas.GeoSeries(polygon, crs=GIS_CRS)
@@ -757,9 +756,40 @@ def geo(world, vd, opts):
             gdf['name'] = 'abc-{}'.format(random.randint(1000, 10000))
             gdf['landform_id'] = landform_ids[idx]
             gdf.to_postgis(name='continents', con=engine, if_exists='append')
-        else:
-            gdf['name'] = 'Lake'
+        # else:
+        #     gdf['name'] = 'Lake'
+        #     gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+
+    # Add bodies of water
+    engine.execute('drop table if exists lakes')
+
+    for waterbody_id in [id for id in numpy.unique(world.cp_waterbody_id) if id != -1]:
+        # Get all cells with the current waterbody_id
+        cell_idxs = numpy.argwhere(world.cp_waterbody_id == waterbody_id)[:, 0]
+
+        # Find the entity that represents this waterbody
+        entity = [entity for entity in world.entities() if hasattr(entity, 'id') and entity.id == waterbody_id][0]
+
+        # Each landform should be a single polygon UNLESS it needs to be split across 
+        # the antimeridian / poles. Iterate over the coordinates in order.
+        for point_list in vd.outline_polygons(cell_idxs):
+            outline_x = [] 
+            outline_y = []
+
+            for (y, x) in point_list:
+                outline_x.append(x)
+                outline_y.append(y)
+
+            geometry = geopandas.points_from_xy(x=outline_x, y=outline_y)
+            polygon = Polygon(geometry)
+
+            series = geopandas.GeoSeries(polygon, crs=GIS_CRS)
+            gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
+
+            gdf['name'] = entity.name
+            gdf['waterbody_id'] = waterbody_id
             gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+
 
     # Prep PostGIS for cities
     engine.execute('drop table if exists cities')
@@ -780,6 +810,7 @@ def geo(world, vd, opts):
         gdf.to_postgis(name='cities', con=engine, if_exists='append')
 
     # Prep PostGIS for biomes
+    return
     engine.execute('drop table if exists biomes')
 
     for cell_idx in [idx for idx in world.cell_idxs() if world.cp_celltype[idx] == Cell.Type.LAND]:
