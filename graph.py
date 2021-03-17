@@ -121,6 +121,22 @@ class Graph(object):
             return True
         except:
             return False
+    
+    def shortest_path(self, from_idx, to_idx, score_func=None):
+        '''
+        Return the cell_idx's for the shortest path between `from_idx` and `to_idx`. If
+        provided, `score_func` will run for each path and the path with the highest score
+        will be returned.
+        '''
+        paths = self.ig.get_shortest_paths(from_idx, to_idx)
+
+        if score_func is not None:
+            scores = list( map(score_func, paths) )
+            score_index = scores.index(max(scores))
+
+            return paths[score_index]
+        else:
+            return paths[0]
 
 def BuildGraph(cell_idxs, vor, mapping):
     '''

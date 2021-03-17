@@ -523,7 +523,7 @@ def print_render(world, vd, opts):
 
                     labels.append( Label((x, y), (w, h), entity.name, font_scale) )
 
-        # Optimize label positions
+        # OPTIMIZE label positions
         iter_count = 0
         conflicts = find_conflicts(labels)
 
@@ -762,13 +762,15 @@ def geo(world, vd, opts):
 
     # Add bodies of water
     engine.execute('drop table if exists lakes')
+    engine.execute('drop table if exists waterbodies')
 
-    for waterbody_id in [id for id in numpy.unique(world.cp_waterbody_id) if id != -1]:
-        # Get all cells with the current waterbody_id
-        cell_idxs = numpy.argwhere(world.cp_waterbody_id == waterbody_id)[:, 0]
+    waterbody_types = [
+        PointOfInterest.Type.LAKE, 
+        PointOfInterest.Type.BAY,
+    ]
 
-        # Find the entity that represents this waterbody
-        entity = [entity for entity in world.entities() if hasattr(entity, 'id') and entity.id == waterbody_id][0]
+    for entity in [e for e in world.entities() if isinstance(e, PointOfInterest) and e.type in waterbody_types]:
+        cell_idxs = numpy.argwhere(world.cp_waterbody_id == entity.id)[:, 0]
 
         # Each landform should be a single polygon UNLESS it needs to be split across 
         # the antimeridian / poles. Iterate over the coordinates in order.
@@ -787,9 +789,17 @@ def geo(world, vd, opts):
             gdf = geopandas.GeoDataFrame(geometry=series, crs=GIS_CRS)
 
             gdf['name'] = entity.name
-            gdf['waterbody_id'] = waterbody_id
-            gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+            gdf['waterbody_id'] = entity.id
 
+            if entity.type == PointOfInterest.Type.LAKE:
+                gdf.to_postgis(name='lakes', con=engine, if_exists='append')
+            elif entity.type == PointOfInterest.Type.BAY:
+                min_x, _, max_x, _ = polygon.bounds
+
+                # hack to avoid antimeridian noise
+                # TODO: fix
+                if abs(max_x - min_x) < 90:
+                    gdf.to_postgis(name='waterbodies', con=engine, if_exists='append')
 
     # Prep PostGIS for cities
     engine.execute('drop table if exists cities')

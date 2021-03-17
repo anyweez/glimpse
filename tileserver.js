@@ -10,6 +10,7 @@ const layers = [
     { name: 'lakes', mapnik_path: './mapnik/lakes.xml' },
     // { name: 'hillshading', mapnik_path: './mapnik/hillshading.xml' },
     { name: 'biomes', mapnik_path: './mapnik/biomes.xml' },
+    { name: 'waterbodies', mapnik_path: './mapnik/waterbodies.xml' },
 ]
 
 console.log('Initiatizing tileserver...')

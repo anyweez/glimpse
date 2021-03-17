@@ -100,3 +100,6 @@ class World(AbstractCellGroup):
         then a value of (10 / 200) = 0.05 will be returned.
         '''
         return cell_count / len( self.cell_idxs() )
+    
+    def cell_abs(self, cell_pct):
+        return round( len(self.cell_idxs()) * cell_pct )
